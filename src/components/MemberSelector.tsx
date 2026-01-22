@@ -10,6 +10,7 @@ export function MemberSelector() {
 
   const handleAddMember = async () => {
     if (newName.trim()) {
+      // Backend deduplicates - if name exists, it removes duplicates
       await addMember(newName.trim());
       setNewName('');
       setIsAdding(false);

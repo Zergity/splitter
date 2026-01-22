@@ -66,10 +66,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addMember = useCallback(
     async (name: string) => {
       if (!group) return;
+      const trimmedName = name.trim();
       const newMember: Member = {
         id: crypto.randomUUID(),
-        name,
+        name: trimmedName,
       };
+      // Backend will deduplicate - if name exists, duplicates are removed
+      // and only the first occurrence is kept
       const updated = await api.updateGroup({
         members: [...group.members, newMember],
       });
