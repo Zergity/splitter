@@ -24,7 +24,7 @@ export function AddExpense() {
     group?.members.map((m) => ({
       memberId: m.id,
       value: 0,
-      selected: true,
+      selected: m.id === currentUser?.id,
     })) || []
   );
   const [submitting, setSubmitting] = useState(false);
@@ -32,9 +32,15 @@ export function AddExpense() {
 
   const amountNum = parseFloat(amount) || 0;
 
-  // Auto-fill payer's value when amount changes
+  // Track selected member IDs to detect selection changes
+  const selectedMemberIds = splits
+    .filter((s) => s.selected)
+    .map((s) => s.memberId)
+    .join(',');
+
+  // Auto-fill payer's value when amount, selection, or payer changes
   useEffect(() => {
-    if (amountNum <= 0 || splitType === 'shares') return;
+    if (splitType === 'shares') return;
 
     const selected = splits.filter((s) => s.selected);
     if (selected.length === 0) return;
@@ -56,7 +62,7 @@ export function AddExpense() {
         s.memberId === recipientId ? { ...s, value: remainder } : s
       )
     );
-  }, [amountNum, paidBy, splitType]);
+  }, [amountNum, paidBy, splitType, selectedMemberIds]);
 
   if (!group) return null;
   const selectedSplits = splits.filter((s) => s.selected);
@@ -224,12 +230,6 @@ export function AddExpense() {
       <h2 className="text-xl font-bold mb-6">Add Expense</h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            {error}
-          </div>
-        )}
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Description
@@ -240,21 +240,6 @@ export function AddExpense() {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What was this expense for?"
             className="w-full border rounded-lg px-3 py-2"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Amount ({group.currency})
-          </label>
-          <input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            min="0"
-            step="0.01"
-            className="w-full border rounded-lg px-3 py-2 text-lg"
           />
         </div>
 
@@ -277,18 +262,24 @@ export function AddExpense() {
         </div>
 
         <div>
-          <div className="flex justify-between items-center mb-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Split type
-            </label>
-            <button
-              type="button"
-              onClick={handleSplitEqually}
-              className="text-sm text-indigo-600 hover:text-indigo-800 underline"
-            >
-              Split equally
-            </button>
-          </div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Split between
+          </label>
+          <SplitInput
+            members={group.members}
+            splitType={splitType}
+            splits={splits}
+            totalAmount={amountNum}
+            currency={group.currency}
+            paidBy={paidBy}
+            onChange={setSplits}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Split type
+          </label>
           <div className="flex gap-2">
             {(['exact', 'percentage', 'shares'] as SplitType[]).map(
               (type) => (
@@ -310,9 +301,18 @@ export function AddExpense() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Split between
-          </label>
+          <div className="flex justify-between items-center mb-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Amounts
+            </label>
+            <button
+              type="button"
+              onClick={handleSplitEqually}
+              className="text-sm text-indigo-600 hover:text-indigo-800 underline"
+            >
+              Split equally
+            </button>
+          </div>
           <SplitInput
             members={group.members}
             splitType={splitType}
@@ -321,8 +321,17 @@ export function AddExpense() {
             currency={group.currency}
             paidBy={paidBy}
             onChange={setSplits}
+            showAmounts
+            amountValue={amount}
+            onAmountChange={setAmount}
           />
         </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {error}
+          </div>
+        )}
 
         <button
           type="submit"

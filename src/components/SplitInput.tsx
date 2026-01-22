@@ -16,6 +16,9 @@ interface SplitInputProps {
   currency: string;
   paidBy: string;
   onChange: (splits: SplitValue[]) => void;
+  onAmountChange?: (amount: string) => void;
+  amountValue?: string;
+  showAmounts?: boolean;
 }
 
 export function SplitInput({
@@ -26,12 +29,17 @@ export function SplitInput({
   currency,
   paidBy,
   onChange,
+  onAmountChange,
+  amountValue = '',
+  showAmounts = false,
 }: SplitInputProps) {
   // Track which input is being edited and its text value
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
 
   const selectedSplits = splits.filter((s) => s.selected);
+  const allSelected = selectedSplits.length === members.length;
+  const noneSelected = selectedSplits.length === 0;
 
   const getCalculatedAmount = (split: SplitValue): number => {
     if (!split.selected) return 0;
@@ -57,6 +65,18 @@ export function SplitInput({
           ? { ...s, selected: !s.selected, value: s.value || 1 }
           : s
       )
+    );
+  };
+
+  const selectAll = () => {
+    onChange(
+      splits.map((s) => ({ ...s, selected: true, value: s.value || 1 }))
+    );
+  };
+
+  const deselectAll = () => {
+    onChange(
+      splits.map((s) => ({ ...s, selected: false }))
     );
   };
 
@@ -142,54 +162,130 @@ export function SplitInput({
   };
 
   return (
-    <div className="space-y-3">
-      {members.map((member) => {
-        const split = splits.find((s) => s.memberId === member.id);
-        if (!split) return null;
+    <div className="space-y-4">
+      {/* Compact chip selection - only show if NOT showing amounts */}
+      {!showAmounts && (
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-xs text-gray-500">
+              {selectedSplits.length} of {members.length} selected
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={selectAll}
+                disabled={allSelected}
+                className="text-xs text-indigo-600 hover:text-indigo-800 disabled:text-gray-400"
+              >
+                All
+              </button>
+              <span className="text-gray-300">|</span>
+              <button
+                type="button"
+                onClick={deselectAll}
+                disabled={noneSelected}
+                className="text-xs text-indigo-600 hover:text-indigo-800 disabled:text-gray-400"
+              >
+                None
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {members.map((member) => {
+              const split = splits.find((s) => s.memberId === member.id);
+              if (!split) return null;
 
-        const isEditing = editingId === member.id;
-        const displayValue = isEditing ? editingValue : formatInputValue(split.value);
+              return (
+                <button
+                  key={member.id}
+                  type="button"
+                  onClick={() => toggleMember(member.id)}
+                  className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                    split.selected
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {member.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
-        return (
-          <div
-            key={member.id}
-            className={`flex items-center gap-3 p-3 rounded-lg border ${
-              split.selected ? 'border-indigo-300 bg-indigo-50' : 'border-gray-200'
-            }`}
-          >
-            <input
-              type="checkbox"
-              checked={split.selected}
-              onChange={() => toggleMember(member.id)}
-              className="w-4 h-4 text-indigo-600 rounded"
-            />
-            <span className="flex-1 font-medium">{member.name}</span>
-            {split.selected && (
+      {/* Amounts section - only show if showAmounts is true */}
+      {showAmounts && selectedSplits.length > 0 && (
+        <div className="space-y-2">
+
+          {/* Total amount input */}
+          {onAmountChange && (
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-indigo-100 border border-indigo-300">
+              <span className="flex-1 text-sm font-semibold text-indigo-900">
+                Total
+              </span>
               <div className="flex items-center gap-1">
                 <input
-                  type="text"
-                  inputMode="decimal"
-                  value={displayValue}
-                  onChange={(e) => handleInputChange(member.id, e.target.value)}
-                  onFocus={() => handleFocus(member.id, split.value)}
-                  onBlur={() => handleBlur(member.id)}
+                  type="number"
+                  value={amountValue}
+                  onChange={(e) => onAmountChange(e.target.value)}
                   placeholder="0"
-                  className="w-20 border rounded px-2 py-1 text-right text-sm"
+                  min="0"
+                  step="0.01"
+                  className="w-20 border border-indigo-300 rounded px-2 py-1 text-right text-sm font-semibold"
                 />
-                <span className="text-sm text-gray-500 w-6">
-                  {splitType === 'exact' ? currency : splitType === 'percentage' ? '%' : ''}
+                <span className="text-xs text-indigo-700 w-4">
+                  {currency}
                 </span>
               </div>
-            )}
-            {split.selected && splitType !== 'exact' && (
-              <span className="text-sm text-gray-500 w-16 text-right">
-                {formatCurrency(getCalculatedAmount(split), currency)}
-              </span>
-            )}
-          </div>
-        );
-      })}
+            </div>
+          )}
 
+          {/* Individual split amounts */}
+          {selectedSplits.map((split) => {
+            const member = members.find((m) => m.id === split.memberId);
+            if (!member) return null;
+
+            const isEditing = editingId === member.id;
+            const displayValue = isEditing ? editingValue : formatInputValue(split.value);
+            const isPayer = member.id === paidBy;
+
+            return (
+              <div
+                key={member.id}
+                className={`flex items-center gap-2 p-2 rounded-lg ${
+                  isPayer ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50'
+                }`}
+              >
+                <span className="flex-1 text-sm font-medium truncate">
+                  {member.name}
+                  {isPayer && <span className="text-indigo-600 ml-1">(payer)</span>}
+                </span>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={displayValue}
+                    onChange={(e) => handleInputChange(member.id, e.target.value)}
+                    onFocus={() => handleFocus(member.id, split.value)}
+                    onBlur={() => handleBlur(member.id)}
+                    placeholder="0"
+                    className="w-16 border rounded px-2 py-1 text-right text-sm"
+                  />
+                  <span className="text-xs text-gray-500 w-4">
+                    {splitType === 'exact' ? currency : splitType === 'percentage' ? '%' : ''}
+                  </span>
+                </div>
+                {splitType !== 'exact' && (
+                  <span className="text-xs text-gray-500 w-14 text-right">
+                    {formatCurrency(getCalculatedAmount(split), currency)}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
