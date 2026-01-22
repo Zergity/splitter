@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { ExpenseCard } from '../components/ExpenseCard';
+import { getDateKey, formatDateHeader } from '../utils/balances';
+import { Expense } from '../types';
 
 export function Expenses() {
   const { group, expenses, currentUser, deleteExpense } = useApp();
@@ -22,6 +24,32 @@ export function Expenses() {
   const sortedExpenses = [...filteredExpenses].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
+
+  // Group expenses by day
+  const groupedExpenses = useMemo(() => {
+    const groups: { dateKey: string; expenses: Expense[] }[] = [];
+    let currentDateKey = '';
+    let currentGroup: Expense[] = [];
+
+    sortedExpenses.forEach((expense) => {
+      const dateKey = getDateKey(expense.createdAt);
+      if (dateKey !== currentDateKey) {
+        if (currentGroup.length > 0) {
+          groups.push({ dateKey: currentDateKey, expenses: currentGroup });
+        }
+        currentDateKey = dateKey;
+        currentGroup = [expense];
+      } else {
+        currentGroup.push(expense);
+      }
+    });
+
+    if (currentGroup.length > 0) {
+      groups.push({ dateKey: currentDateKey, expenses: currentGroup });
+    }
+
+    return groups;
+  }, [sortedExpenses]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this expense?')) return;
@@ -70,7 +98,7 @@ export function Expenses() {
         </div>
       )}
 
-      {sortedExpenses.length === 0 ? (
+      {groupedExpenses.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           <p>No expenses yet</p>
           <Link to="/add" className="text-indigo-600 font-medium mt-2 inline-block">
@@ -78,15 +106,24 @@ export function Expenses() {
           </Link>
         </div>
       ) : (
-        <div className="space-y-4">
-          {sortedExpenses.map((expense) => (
-            <div key={expense.id} className={deleting === expense.id ? 'opacity-50' : ''}>
-              <ExpenseCard
-                expense={expense}
-                members={group.members}
-                currency={group.currency}
-                onDelete={() => handleDelete(expense.id)}
-              />
+        <div className="space-y-6">
+          {groupedExpenses.map(({ dateKey, expenses: dayExpenses }) => (
+            <div key={dateKey}>
+              <h3 className="text-sm font-medium text-gray-500 mb-3">
+                {formatDateHeader(dateKey)}
+              </h3>
+              <div className="space-y-3">
+                {dayExpenses.map((expense) => (
+                  <div key={expense.id} className={deleting === expense.id ? 'opacity-50' : ''}>
+                    <ExpenseCard
+                      expense={expense}
+                      members={group.members}
+                      currency={group.currency}
+                      onDelete={() => handleDelete(expense.id)}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Expense, Member } from '../types';
-import { formatCurrency } from '../utils/balances';
+import { formatCurrency, formatRelativeTime } from '../utils/balances';
 import { SignOffButton } from './SignOffButton';
 import { useApp } from '../context/AppContext';
 
@@ -144,6 +144,9 @@ export function ExpenseCard({
                   }`}
                 />
                 {getMemberName(split.memberId)}
+                {split.signedOff && (
+                  <span className="text-xs text-green-600 font-medium">Signed</span>
+                )}
               </span>
               <span className="text-gray-600">
                 {formatCurrency(split.amount, currency)}
@@ -189,7 +192,7 @@ export function ExpenseCard({
       )}
 
       <p className="text-xs text-gray-400 mt-3">
-        {new Date(expense.createdAt).toLocaleDateString()}
+        {formatRelativeTime(expense.createdAt)}
       </p>
     </div>
   );
