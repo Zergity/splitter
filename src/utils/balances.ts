@@ -93,11 +93,29 @@ export function calculateSettlements(balances: MemberBalance[]): Settlement[] {
 }
 
 export function formatCurrency(amount: number, currency: string): string {
+  // Round to 1 decimal place
+  const rounded = Math.round(amount * 10) / 10;
+
   if (currency === 'K') {
-    return `${amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}K`;
+    return `${rounded.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}K`;
   }
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency,
-  }).format(amount);
+  }).format(rounded);
+}
+
+// Format number with thousands separator
+export function formatNumber(value: number, decimals: number = 1): string {
+  const rounded = Math.round(value * Math.pow(10, decimals)) / Math.pow(10, decimals);
+  return rounded.toLocaleString('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: decimals,
+  });
+}
+
+// Round a number to specified decimal places
+export function roundNumber(value: number, decimals: number = 1): number {
+  const factor = Math.pow(10, decimals);
+  return Math.round(value * factor) / factor;
 }
