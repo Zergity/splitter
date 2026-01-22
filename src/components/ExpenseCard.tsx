@@ -24,6 +24,7 @@ export function ExpenseCard({
   const [isEditing, setIsEditing] = useState(false);
   const [editDescription, setEditDescription] = useState(expense.description);
   const [saving, setSaving] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const payer = members.find((m) => m.id === expense.paidBy);
   const creator = members.find((m) => m.id === expense.createdBy);
@@ -128,32 +129,94 @@ export function ExpenseCard({
       </div>
 
       <div className="mt-3 pt-3 border-t">
-        <p className="text-xs text-gray-500 mb-2">
-          Split ({expense.splitType}):
-        </p>
-        <div className="space-y-1">
-          {expense.splits.map((split) => (
-            <div
-              key={split.memberId}
-              className="flex justify-between items-center text-sm"
-            >
+        {/* Collapsed view: show only user's split */}
+        {!expanded && userSplit && (
+          <div
+            className="cursor-pointer"
+            onClick={() => setExpanded(true)}
+          >
+            <div className="flex justify-between items-center text-sm">
               <span className="flex items-center gap-2">
                 <span
                   className={`w-2 h-2 rounded-full ${
-                    split.signedOff ? 'bg-green-500' : 'bg-yellow-500'
+                    userSplit.signedOff ? 'bg-green-500' : 'bg-yellow-500'
                   }`}
                 />
-                {getMemberName(split.memberId)}
-                {split.signedOff && (
+                Your share
+                {userSplit.signedOff && (
                   <span className="text-xs text-green-600 font-medium">Signed</span>
                 )}
               </span>
               <span className="text-gray-600">
-                {formatCurrency(split.amount, currency)}
+                {formatCurrency(userSplit.amount, currency)}
               </span>
             </div>
-          ))}
-        </div>
+            {expense.splits.length > 1 && (
+              <p className="text-xs text-indigo-600 mt-1">
+                Tap to see all {expense.splits.length} participants
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Collapsed view: no user split, show summary */}
+        {!expanded && !userSplit && (
+          <div
+            className="cursor-pointer"
+            onClick={() => setExpanded(true)}
+          >
+            <p className="text-sm text-gray-600">
+              {expense.splits.length} participant{expense.splits.length !== 1 ? 's' : ''}
+            </p>
+            <p className="text-xs text-indigo-600 mt-1">
+              Tap to see details
+            </p>
+          </div>
+        )}
+
+        {/* Expanded view: show all splits */}
+        {expanded && (
+          <div>
+            <div
+              className="flex justify-between items-center mb-2 cursor-pointer"
+              onClick={() => setExpanded(false)}
+            >
+              <p className="text-xs text-gray-500">
+                Split ({expense.splitType}):
+              </p>
+              <p className="text-xs text-indigo-600">
+                Tap to collapse
+              </p>
+            </div>
+            <div className="space-y-1">
+              {expense.splits.map((split) => (
+                <div
+                  key={split.memberId}
+                  className={`flex justify-between items-center text-sm ${
+                    currentUser && split.memberId === currentUser.id ? 'font-medium' : ''
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        split.signedOff ? 'bg-green-500' : 'bg-yellow-500'
+                      }`}
+                    />
+                    {currentUser && split.memberId === currentUser.id
+                      ? `${getMemberName(split.memberId)} (you)`
+                      : getMemberName(split.memberId)}
+                    {split.signedOff && (
+                      <span className="text-xs text-green-600 font-medium">Signed</span>
+                    )}
+                  </span>
+                  <span className="text-gray-600">
+                    {formatCurrency(split.amount, currency)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {showSignOff && userSplit && !userSplit.signedOff && (
