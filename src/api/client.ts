@@ -76,6 +76,7 @@ export async function signOffExpense(
         ...split,
         signedOff: true,
         signedAt: new Date().toISOString(),
+        previousAmount: undefined, // Clear after signing off
       };
     }
     return split;

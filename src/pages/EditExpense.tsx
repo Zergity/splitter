@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { SplitInput } from '../components/SplitInput';
 import { SplitType } from '../types';
@@ -12,25 +12,54 @@ interface SplitValue {
   selected: boolean;
 }
 
-export function AddExpense() {
+export function EditExpense() {
   const navigate = useNavigate();
-  const { group, currentUser, createExpense } = useApp();
+  const { id } = useParams<{ id: string }>();
+  const { group, expenses, currentUser, updateExpense } = useApp();
+
+  const expense = expenses.find((e) => e.id === id);
 
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
-  const [paidBy, setPaidBy] = useState(currentUser?.id || '');
+  const [paidBy, setPaidBy] = useState('');
   const [splitType, setSplitType] = useState<SplitType>('exact');
-  const [splits, setSplits] = useState<SplitValue[]>(() =>
-    group?.members.map((m) => ({
-      memberId: m.id,
-      value: 0,
-      selected: true,
-    })) || []
-  );
+  const [splits, setSplits] = useState<SplitValue[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Initialize form with existing expense data
+  useEffect(() => {
+    if (expense && group) {
+      setDescription(expense.description);
+      setAmount(expense.amount.toString());
+      setPaidBy(expense.paidBy);
+      setSplitType(expense.splitType);
+
+      // Build splits from expense and group members
+      const expenseSplits = new Map(
+        expense.splits.map((s) => [s.memberId, s])
+      );
+
+      setSplits(
+        group.members.map((m) => {
+          const existingSplit = expenseSplits.get(m.id);
+          return {
+            memberId: m.id,
+            value: existingSplit?.value || 0,
+            selected: !!existingSplit,
+          };
+        })
+      );
+    }
+  }, [expense, group]);
+
   const amountNum = parseFloat(amount) || 0;
+
+  // Check if current user can edit (payer or creator)
+  const canEdit =
+    currentUser &&
+    expense &&
+    (currentUser.id === expense.paidBy || currentUser.id === expense.createdBy);
 
   // Auto-fill payer's value when amount changes
   useEffect(() => {
@@ -58,7 +87,22 @@ export function AddExpense() {
     );
   }, [amountNum, paidBy, splitType]);
 
-  if (!group) return null;
+  if (!group || !expense) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        Expense not found
+      </div>
+    );
+  }
+
+  if (!canEdit) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        You don't have permission to edit this expense
+      </div>
+    );
+  }
+
   const selectedSplits = splits.filter((s) => s.selected);
 
   // Calculate final amount for a split based on current type
@@ -98,7 +142,7 @@ export function AddExpense() {
     }));
 
     // Convert to new type values
-    const totalShares = selected.length; // For shares, use count as base
+    const totalShares = selected.length;
     const newSplits = splits.map((s) => {
       const currentAmount = amounts.find((a) => a.memberId === s.memberId)?.amount || 0;
 
@@ -111,7 +155,6 @@ export function AddExpense() {
           newValue = amountNum > 0 ? roundNumber((currentAmount / amountNum) * 100, 1) : 0;
           break;
         case 'shares':
-          // Convert to shares proportionally, normalized to sum = totalShares
           newValue = amountNum > 0 ? roundNumber((currentAmount / amountNum) * totalShares, 1) : 0;
           break;
         default:
@@ -171,11 +214,6 @@ export function AddExpense() {
       return;
     }
 
-    if (!currentUser) {
-      setError('Select your name first');
-      return;
-    }
-
     if (selectedSplits.length === 0) {
       setError('Select at least one participant');
       return;
@@ -195,25 +233,63 @@ export function AddExpense() {
     setSubmitting(true);
 
     try {
-      const calculatedSplits = calculateSplits(
+      // Calculate new splits
+      const newCalculatedSplits = calculateSplits(
         amountNum,
         splitType,
         selectedSplits.map((s) => ({ memberId: s.memberId, value: s.value })),
         paidBy
       );
 
-      await createExpense({
+      // Determine which members need to re-sign-off
+      // Reset signedOff for members whose amount changed
+      const oldSplitsMap = new Map(
+        expense.splits.map((s) => [s.memberId, s])
+      );
+
+      const finalSplits = newCalculatedSplits.map((newSplit) => {
+        const oldSplit = oldSplitsMap.get(newSplit.memberId);
+
+        // If member is the payer, auto-sign
+        if (newSplit.memberId === paidBy) {
+          return {
+            ...newSplit,
+            signedOff: true,
+            signedAt: new Date().toISOString(),
+          };
+        }
+
+        // If this is a new participant or amount changed significantly, require re-sign-off
+        if (!oldSplit || Math.abs(oldSplit.amount - newSplit.amount) > 0.01) {
+          return {
+            ...newSplit,
+            signedOff: false,
+            signedAt: undefined,
+            // Store the previous amount so we can show the change
+            previousAmount: oldSplit?.amount,
+          };
+        }
+
+        // Keep existing sign-off status if amount didn't change
+        return {
+          ...newSplit,
+          signedOff: oldSplit.signedOff,
+          signedAt: oldSplit.signedAt,
+          previousAmount: oldSplit.previousAmount, // preserve if already set
+        };
+      });
+
+      await updateExpense(expense.id, {
         description: description.trim(),
         amount: amountNum,
         paidBy,
-        createdBy: currentUser.id,
         splitType,
-        splits: calculatedSplits,
+        splits: finalSplits,
       });
 
       navigate('/expenses');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create expense');
+      setError(err instanceof Error ? err.message : 'Failed to update expense');
     } finally {
       setSubmitting(false);
     }
@@ -221,7 +297,11 @@ export function AddExpense() {
 
   return (
     <div className="pb-20">
-      <h2 className="text-xl font-bold mb-6">Add Expense</h2>
+      <h2 className="text-xl font-bold mb-6">Edit Expense</h2>
+
+      <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg mb-6 text-sm">
+        Changing amounts will require affected members to sign off again.
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
@@ -324,13 +404,22 @@ export function AddExpense() {
           />
         </div>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {submitting ? 'Adding...' : 'Add Expense'}
-        </button>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {submitting ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
       </form>
     </div>
   );

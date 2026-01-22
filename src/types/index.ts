@@ -23,6 +23,7 @@ export interface ExpenseSplit {
   amount: number; // calculated actual amount
   signedOff: boolean;
   signedAt?: string;
+  previousAmount?: number; // stored when amount changes and needs re-sign-off
 }
 
 // Expense with sign-off tracking
@@ -31,6 +32,7 @@ export interface Expense {
   description: string;
   amount: number;
   paidBy: string; // member id
+  createdBy: string; // member id who created the expense
   splitType: SplitType;
   splits: ExpenseSplit[];
   createdAt: string;
