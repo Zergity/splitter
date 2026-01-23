@@ -13,6 +13,7 @@ interface AuthContextType extends AuthState {
   setSession: (session: SessionInfo) => void;
   listPasskeys: () => Promise<PasskeyInfo[]>;
   deletePasskey: (passkeyId: string) => Promise<void>;
+  updateProfile: (name: string) => Promise<SessionInfo>;
   clearWebAuthnError: () => void;
 }
 
@@ -54,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession: auth.setSession,
     listPasskeys: auth.listPasskeys,
     deletePasskey: auth.deletePasskey,
+    updateProfile: auth.updateProfile,
     clearWebAuthnError: webAuthn.clearError,
   };
 

@@ -127,3 +127,12 @@ export async function deletePasskey(passkeyId: string): Promise<void> {
     method: 'DELETE',
   });
 }
+
+// Profile management
+export async function updateProfile(name: string): Promise<SessionInfo> {
+  const result = await fetchAuthApi<{ session: SessionInfo }>('/profile', {
+    method: 'PUT',
+    body: JSON.stringify({ name }),
+  });
+  return result.session;
+}

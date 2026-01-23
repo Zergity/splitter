@@ -8,6 +8,7 @@ interface UseAuthReturn extends AuthState {
   setSession: (session: SessionInfo) => void;
   listPasskeys: () => Promise<PasskeyInfo[]>;
   deletePasskey: (passkeyId: string) => Promise<void>;
+  updateProfile: (name: string) => Promise<SessionInfo>;
 }
 
 export function useAuth(): UseAuthReturn {
@@ -63,6 +64,16 @@ export function useAuth(): UseAuthReturn {
     await authApi.deletePasskey(passkeyId);
   }, []);
 
+  const updateProfile = useCallback(async (name: string): Promise<SessionInfo> => {
+    const session = await authApi.updateProfile(name);
+    setState({
+      authenticated: true,
+      session,
+      loading: false,
+    });
+    return session;
+  }, []);
+
   // Check session on mount
   useEffect(() => {
     checkSession();
@@ -75,5 +86,6 @@ export function useAuth(): UseAuthReturn {
     setSession,
     listPasskeys,
     deletePasskey,
+    updateProfile,
   };
 }
