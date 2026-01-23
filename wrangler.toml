@@ -5,3 +5,14 @@ pages_build_output_dir = "dist"
 [[kv_namespaces]]
 binding = "SPLITTER_KV"
 id = "c23e2dd45e264bf29351ea5a0dd7eb40"
+
+[vars]
+# For production, set these via Cloudflare dashboard or `wrangler secret put`:
+# - JWT_SECRET: A secure random string (at least 32 characters)
+# - RP_ID: Your production domain (e.g., "splitter.example.com")
+# - RP_ORIGIN: Your production URL (e.g., "https://splitter.example.com")
+
+# Development values (safe to commit)
+RP_ID = "splitter-dhn.pages.dev"
+RP_NAME = "Splitter"
+RP_ORIGIN = "https://splitter-dhn.pages.dev"

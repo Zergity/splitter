@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
+import { AuthProvider } from './components/auth';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { Expenses } from './pages/Expenses';
@@ -12,19 +13,21 @@ import { Balances } from './pages/Balances';
 function App() {
   return (
     <BrowserRouter>
-      <AppProvider>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/expenses" element={<Expenses />} />
-            <Route path="/add" element={<AddExpense />} />
-            <Route path="/edit/:id" element={<EditExpense />} />
-            <Route path="/pending" element={<PendingActions />} />
-            <Route path="/history" element={<History />} />
-            <Route path="/balances" element={<Balances />} />
-          </Routes>
-        </Layout>
-      </AppProvider>
+      <AuthProvider>
+        <AppProvider>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/expenses" element={<Expenses />} />
+              <Route path="/add" element={<AddExpense />} />
+              <Route path="/edit/:id" element={<EditExpense />} />
+              <Route path="/pending" element={<PendingActions />} />
+              <Route path="/history" element={<History />} />
+              <Route path="/balances" element={<Balances />} />
+            </Routes>
+          </Layout>
+        </AppProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

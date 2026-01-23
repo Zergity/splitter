@@ -17,7 +17,7 @@ interface AppContextType {
   error: string | null;
   setCurrentUser: (user: Member | null) => void;
   refreshData: () => Promise<void>;
-  addMember: (name: string) => Promise<void>;
+  addMember: (name: string) => Promise<Member | null>;
   removeMember: (id: string) => Promise<void>;
   updateGroupSettings: (name: string, currency: string) => Promise<void>;
   createExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => Promise<void>;
@@ -28,8 +28,6 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | null>(null);
 
-const CURRENT_USER_KEY = 'splitter_current_user';
-
 export function AppProvider({ children }: { children: ReactNode }) {
   const [group, setGroup] = useState<Group | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -39,11 +37,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const setCurrentUser = useCallback((user: Member | null) => {
     setCurrentUserState(user);
-    if (user) {
-      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(CURRENT_USER_KEY);
-    }
   }, []);
 
   const refreshData = useCallback(async () => {
@@ -64,8 +57,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addMember = useCallback(
-    async (name: string) => {
-      if (!group) return;
+    async (name: string): Promise<Member | null> => {
+      if (!group) return null;
       const trimmedName = name.trim();
       const newMember: Member = {
         id: crypto.randomUUID(),
@@ -77,6 +70,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         members: [...group.members, newMember],
       });
       setGroup(updated);
+
+      // Find the member in the updated group (may be the existing one if deduplicated)
+      const addedMember = updated.members.find(
+        (m) => m.name.toLowerCase() === trimmedName.toLowerCase()
+      );
+      return addedMember || null;
     },
     [group]
   );
@@ -137,20 +136,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     refreshData();
   }, [refreshData]);
 
-  // Restore current user from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem(CURRENT_USER_KEY);
-    if (stored) {
-      try {
-        const user = JSON.parse(stored) as Member;
-        setCurrentUserState(user);
-      } catch {
-        localStorage.removeItem(CURRENT_USER_KEY);
-      }
-    }
-  }, []);
-
-  // Update current user if member list changes
+  // Update current user if member list changes (e.g., member removed)
   useEffect(() => {
     if (currentUser && group) {
       const memberExists = group.members.some((m) => m.id === currentUser.id);

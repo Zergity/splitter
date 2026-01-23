@@ -59,3 +59,25 @@ export interface Settlement {
   toName: string;
   amount: number;
 }
+
+// Auth types
+export interface SessionInfo {
+  memberId: string;
+  memberName: string;
+  expiresAt: string;
+}
+
+export interface AuthState {
+  authenticated: boolean;
+  session: SessionInfo | null;
+  loading: boolean;
+}
+
+export interface PasskeyInfo {
+  id: string;
+  createdAt: string;
+  lastUsedAt?: string;
+  friendlyName?: string;
+}
+
+export type AuthMode = 'login' | 'register';
