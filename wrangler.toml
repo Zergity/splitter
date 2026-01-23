@@ -13,6 +13,6 @@ id = "c23e2dd45e264bf29351ea5a0dd7eb40"
 # - RP_ORIGIN: Your production URL (e.g., "https://splitter.example.com")
 
 # Development values (safe to commit)
-RP_ID = "splitter-dhn.pages.dev"
+RP_ID = "split.vietcha.in"
 RP_NAME = "Splitter"
-RP_ORIGIN = "https://splitter-dhn.pages.dev"
+RP_ORIGIN = "https://split.vietcha.in"
