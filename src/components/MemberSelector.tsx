@@ -61,28 +61,35 @@ export function MemberSelector() {
     setRegisterError(null);
     clearWebAuthnError();
 
-    // Check if name already exists (case-insensitive)
-    const nameExists = group?.members.some(
-      m => m.name.toLowerCase() === newName.trim().toLowerCase()
-    );
-    if (nameExists) {
-      setRegisterError('Name already taken');
-      return;
-    }
-
     try {
-      // Create new member
-      const member = await addMember(newName.trim());
-      if (!member) {
-        throw new Error('Failed to create member');
+      // Check if member already exists (case-insensitive)
+      const existingMember = group?.members.find(
+        m => m.name.toLowerCase() === newName.trim().toLowerCase()
+      );
+
+      let member;
+      if (existingMember) {
+        // Use existing member (re-registration for member without passkey)
+        member = existingMember;
+      } else {
+        // Create new member
+        member = await addMember(newName.trim());
+        if (!member) {
+          throw new Error('Failed to create member');
+        }
       }
 
-      // Register passkey for new member
+      // Register passkey for member
       await register(member.id, member.name);
       setNewName('');
       setAuthFlow(null);
-    } catch {
-      // Error shown in UI via webAuthnError
+    } catch (err) {
+      // Show specific error for already registered case
+      const message = err instanceof Error ? err.message : 'Registration failed';
+      if (message.includes('already registered') || message.includes('credential already exists')) {
+        setRegisterError('This user already has a passkey. Please sign in instead.');
+      }
+      // Other errors shown via webAuthnError
     }
   };
 
