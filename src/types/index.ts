@@ -51,7 +51,6 @@ export interface ReceiptItem {
 // Receipt OCR result
 export interface ReceiptOCRResult {
   success: boolean;
-  imageUrl: string;
   extracted: {
     items: ReceiptItem[];
     date?: string;

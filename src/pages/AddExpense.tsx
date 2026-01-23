@@ -14,7 +14,6 @@ export function AddExpense() {
   const [paidBy, setPaidBy] = useState(currentUser?.id || '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [receiptUrl, setReceiptUrl] = useState<string | undefined>(undefined);
   const [receiptDate, setReceiptDate] = useState<string | undefined>(undefined);
   const [items, setItems] = useState<ReceiptItem[]>([]);
   const [manualTotal, setManualTotal] = useState<number | null>(null);
@@ -50,7 +49,6 @@ export function AddExpense() {
   };
 
   const handleReceiptProcessed = (result: ReceiptOCRResult) => {
-    setReceiptUrl(result.imageUrl);
     setItems(result.extracted.items);
 
     if (result.extracted.merchant) {
@@ -67,7 +65,6 @@ export function AddExpense() {
 
   const handleClearReceipt = () => {
     setItems([]);
-    setReceiptUrl(undefined);
     setReceiptDate(undefined);
     setDescription('');
     setManualTotal(null);
@@ -190,7 +187,6 @@ export function AddExpense() {
         createdBy: currentUser.id,
         splitType: 'exact',
         splits,
-        receiptUrl,
         receiptDate,
       });
 

@@ -75,7 +75,7 @@ export async function processReceipt(file: File): Promise<ReceiptOCRResult> {
     body: formData,
   });
 
-  const data: ApiResponse<{ imageUrl: string; extracted: ReceiptOCRResult['extracted'] }> = await response.json();
+  const data: ApiResponse<{ extracted: ReceiptOCRResult['extracted'] }> = await response.json();
 
   if (!data.success || !data.data) {
     throw new Error(data.error || 'Failed to process receipt');
@@ -83,7 +83,6 @@ export async function processReceipt(file: File): Promise<ReceiptOCRResult> {
 
   return {
     success: true,
-    imageUrl: data.data.imageUrl,
     extracted: data.data.extracted,
   };
 }

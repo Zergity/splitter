@@ -17,9 +17,5 @@ RP_ID = "split.vietcha.in"
 RP_NAME = "Splitter"
 RP_ORIGIN = "https://split.vietcha.in"
 
-[[r2_buckets]]
-binding = "RECEIPTS_BUCKET"
-bucket_name = "splitter-receipts"
-
 [ai]
 binding = "AI"

@@ -2,7 +2,6 @@ import type { AuthEnv } from '../types/auth';
 import { verifySession, getTokenFromCookies } from '../utils/jwt';
 
 interface ReceiptsEnv extends AuthEnv {
-  RECEIPTS_BUCKET: R2Bucket;
   AI: Ai;
 }
 
@@ -72,19 +71,6 @@ export const onRequestPost: PagesFunction<ReceiptsEnv> = async (context) => {
     // Read file data
     const arrayBuffer = await file.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
-
-    // Generate unique filename
-    const ext = file.type.split('/')[1].replace('jpeg', 'jpg');
-    const filename = `receipts/${session.memberId}/${crypto.randomUUID()}.${ext}`;
-
-    // Upload to R2
-    await context.env.RECEIPTS_BUCKET.put(filename, uint8Array, {
-      httpMetadata: {
-        contentType: file.type,
-      },
-    });
-
-    const imageUrl = `/api/receipts/${filename}`;
 
     // Process with Workers AI vision model
     let extracted: ExtractedData = { items: [], confidence: 0 };
@@ -209,7 +195,6 @@ Rules:
     return Response.json({
       success: true,
       data: {
-        imageUrl,
         extracted,
       },
     });
