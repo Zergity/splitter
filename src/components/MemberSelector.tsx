@@ -116,7 +116,7 @@ export function MemberSelector() {
 
   if (!isSupported) {
     return (
-      <div className="text-sm text-red-600">
+      <div className="text-sm text-red-400">
         Passkeys not supported
       </div>
     );
@@ -124,7 +124,7 @@ export function MemberSelector() {
 
   // Show loading state
   if (authLoading) {
-    return <div className="text-sm text-gray-500">Loading...</div>;
+    return <div className="text-sm text-gray-400">Loading...</div>;
   }
 
   // Authenticated state
@@ -134,14 +134,14 @@ export function MemberSelector() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleEditName}
-            className="text-sm font-medium text-gray-700 hover:text-indigo-600 hover:underline"
+            className="text-sm font-medium text-gray-300 hover:text-cyan-400 hover:underline"
             title="Click to edit name"
           >
             {currentUser.name}
           </button>
           <button
             onClick={handleLogout}
-            className="text-gray-500 hover:text-gray-700 text-sm"
+            className="text-gray-400 hover:text-gray-200 text-sm"
           >
             Logout
           </button>
@@ -151,8 +151,8 @@ export function MemberSelector() {
           <div className="p-6">
             <div className="text-center">
               <div className="text-4xl mb-4">✏️</div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Edit Name</h2>
-              <p className="text-gray-600 mb-6">
+              <h2 className="text-xl font-semibold text-gray-100 mb-2">Edit Name</h2>
+              <p className="text-gray-400 mb-6">
                 Change your display name.
               </p>
 
@@ -163,15 +163,15 @@ export function MemberSelector() {
                   onChange={(e) => setEditName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
                   placeholder="Your name"
-                  className="w-full border rounded-lg px-3 py-2 text-center"
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-center text-gray-100"
                   autoFocus
                   disabled={editLoading}
                 />
               </div>
 
               {editError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-700">{editError}</p>
+                <div className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-lg">
+                  <p className="text-sm text-red-300">{editError}</p>
                 </div>
               )}
 
@@ -179,14 +179,14 @@ export function MemberSelector() {
                 <button
                   onClick={handleCloseModal}
                   disabled={editLoading}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-700 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveName}
                   disabled={editLoading || !editName.trim() || editName.trim() === currentUser.name}
-                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50"
                 >
                   {editLoading ? 'Saving...' : 'Save'}
                 </button>
@@ -205,14 +205,14 @@ export function MemberSelector() {
         <button
           onClick={handleSignIn}
           disabled={webAuthnLoading}
-          className="px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 disabled:opacity-50"
+          className="px-3 py-1 bg-cyan-600 text-white text-sm rounded hover:bg-cyan-700 disabled:opacity-50"
         >
           {webAuthnLoading && authFlow === 'signin' ? 'Signing in...' : 'Sign In'}
         </button>
         <button
           onClick={() => setAuthFlow('register')}
           disabled={webAuthnLoading}
-          className="text-indigo-600 text-sm font-medium hover:text-indigo-800 disabled:opacity-50"
+          className="text-cyan-400 text-sm font-medium hover:text-cyan-300 disabled:opacity-50"
         >
           New User
         </button>
@@ -222,8 +222,8 @@ export function MemberSelector() {
         <div className="p-6">
           <div className="text-center">
             <div className="text-4xl mb-4">👤</div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Create Account</h2>
-            <p className="text-gray-600 mb-6">
+            <h2 className="text-xl font-semibold text-gray-100 mb-2">Create Account</h2>
+            <p className="text-gray-400 mb-6">
               Enter your name to create an account with passkey authentication.
             </p>
 
@@ -234,15 +234,15 @@ export function MemberSelector() {
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
                 placeholder="Your name"
-                className="w-full border rounded-lg px-3 py-2 text-center"
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-center text-gray-100"
                 autoFocus
                 disabled={webAuthnLoading}
               />
             </div>
 
             {webAuthnError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-700">{webAuthnError}</p>
+              <div className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-lg">
+                <p className="text-sm text-red-300">{webAuthnError}</p>
               </div>
             )}
 
@@ -250,14 +250,14 @@ export function MemberSelector() {
               <button
                 onClick={handleCloseModal}
                 disabled={webAuthnLoading}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-700 disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleRegister}
                 disabled={webAuthnLoading || !newName.trim()}
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50"
               >
                 {webAuthnLoading ? 'Creating...' : 'Create Account'}
               </button>
@@ -270,25 +270,25 @@ export function MemberSelector() {
         <div className="p-6">
           <div className="text-center">
             <div className="text-4xl mb-4">🔐</div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Sign In Failed</h2>
+            <h2 className="text-xl font-semibold text-gray-100 mb-2">Sign In Failed</h2>
 
             {webAuthnError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-700">{webAuthnError}</p>
+              <div className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-lg">
+                <p className="text-sm text-red-300">{webAuthnError}</p>
               </div>
             )}
 
             <div className="flex gap-3">
               <button
                 onClick={handleCloseModal}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-700"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSignIn}
                 disabled={webAuthnLoading}
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:opacity-50"
               >
                 Try Again
               </button>

@@ -231,7 +231,7 @@ export function AddExpense() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-300 mb-1">
             Description
           </label>
           <input
@@ -239,18 +239,18 @@ export function AddExpense() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What was this expense for?"
-            className="w-full border rounded-lg px-3 py-2"
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-300 mb-1">
             Paid by
           </label>
           <select
             value={paidBy}
             onChange={(e) => setPaidBy(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2"
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100"
           >
             <option value="">Select who paid</option>
             {group.members.map((member) => (
@@ -262,7 +262,7 @@ export function AddExpense() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
             Split between
           </label>
           <SplitInput
@@ -277,7 +277,7 @@ export function AddExpense() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
             Split type
           </label>
           <div className="flex gap-2">
@@ -289,8 +289,8 @@ export function AddExpense() {
                   onClick={() => handleSplitTypeChange(type)}
                   className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium capitalize ${
                     splitType === type
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-cyan-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
                 >
                   {type === 'percentage' ? '%' : type}
@@ -302,13 +302,13 @@ export function AddExpense() {
 
         <div>
           <div className="flex justify-between items-center mb-2">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-300">
               Amounts
             </label>
             <button
               type="button"
               onClick={handleSplitEqually}
-              className="text-sm text-indigo-600 hover:text-indigo-800 underline"
+              className="text-sm text-cyan-400 hover:text-cyan-300 underline"
             >
               Split equally
             </button>
@@ -328,7 +328,7 @@ export function AddExpense() {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-3 rounded-lg">
             {error}
           </div>
         )}
@@ -336,7 +336,7 @@ export function AddExpense() {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50"
+          className="w-full bg-cyan-600 text-white py-3 rounded-lg font-medium hover:bg-cyan-700 disabled:opacity-50"
         >
           {submitting ? 'Adding...' : 'Add Expense'}
         </button>

@@ -67,7 +67,7 @@ export function Expenses() {
         <h2 className="text-xl font-bold">All Expenses</h2>
         <Link
           to="/add"
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+          className="bg-cyan-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
         >
           + Add
         </Link>
@@ -79,8 +79,8 @@ export function Expenses() {
             onClick={() => setFilter('all')}
             className={`px-4 py-2 rounded-lg text-sm font-medium ${
               filter === 'all'
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-100 text-gray-700'
+                ? 'bg-cyan-600 text-white'
+                : 'bg-gray-700 text-gray-300'
             }`}
           >
             All
@@ -89,8 +89,8 @@ export function Expenses() {
             onClick={() => setFilter('mine')}
             className={`px-4 py-2 rounded-lg text-sm font-medium ${
               filter === 'mine'
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-100 text-gray-700'
+                ? 'bg-cyan-600 text-white'
+                : 'bg-gray-700 text-gray-300'
             }`}
           >
             My expenses
@@ -99,9 +99,9 @@ export function Expenses() {
       )}
 
       {groupedExpenses.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-gray-400">
           <p>No expenses yet</p>
-          <Link to="/add" className="text-indigo-600 font-medium mt-2 inline-block">
+          <Link to="/add" className="text-cyan-400 font-medium mt-2 inline-block">
             Add your first expense
           </Link>
         </div>
@@ -109,7 +109,7 @@ export function Expenses() {
         <div className="space-y-6">
           {groupedExpenses.map(({ dateKey, expenses: dayExpenses }) => (
             <div key={dateKey}>
-              <h3 className="text-sm font-medium text-gray-500 mb-3">
+              <h3 className="text-sm font-medium text-gray-400 mb-3">
                 {formatDateHeader(dateKey)}
               </h3>
               <div className="space-y-3">

@@ -11,8 +11,8 @@ export function History() {
     return (
       <div className="pb-20">
         <h2 className="text-xl font-bold mb-6">History</h2>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-          <p className="text-yellow-800">
+        <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-4 text-center">
+          <p className="text-yellow-200">
             Select your name from the dropdown above to see your history
           </p>
         </div>
@@ -39,8 +39,8 @@ export function History() {
       </h2>
 
       {sortedExpenses.length === 0 ? (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-          <p className="text-gray-600">No completed expenses yet</p>
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-center">
+          <p className="text-gray-400">No completed expenses yet</p>
           <p className="text-sm text-gray-500 mt-1">
             Expenses appear here once all participants have signed off
           </p>
@@ -60,14 +60,14 @@ export function History() {
                   members={group.members}
                   currency={group.currency}
                 />
-                <div className="text-sm mt-2 px-4 text-gray-600">
+                <div className="text-sm mt-2 px-4 text-gray-400">
                   {isPayer ? (
-                    <span className="text-green-600">
+                    <span className="text-green-400">
                       You paid {formatCurrency(expense.amount, group.currency)}
                       {userSplit && ` (your share: ${formatCurrency(userSplit.amount, group.currency)})`}
                     </span>
                   ) : userSplit ? (
-                    <span className="text-gray-600">
+                    <span className="text-gray-400">
                       Your share: {formatCurrency(userSplit.amount, group.currency)}
                     </span>
                   ) : null}

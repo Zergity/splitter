@@ -175,7 +175,7 @@ export function SplitInput({
                 type="button"
                 onClick={selectAll}
                 disabled={allSelected}
-                className="text-xs text-indigo-600 hover:text-indigo-800 disabled:text-gray-400"
+                className="text-xs text-cyan-400 hover:text-cyan-300 disabled:text-gray-400"
               >
                 All
               </button>
@@ -184,7 +184,7 @@ export function SplitInput({
                 type="button"
                 onClick={deselectAll}
                 disabled={noneSelected}
-                className="text-xs text-indigo-600 hover:text-indigo-800 disabled:text-gray-400"
+                className="text-xs text-cyan-400 hover:text-cyan-300 disabled:text-gray-400"
               >
                 None
               </button>
@@ -202,8 +202,8 @@ export function SplitInput({
                   onClick={() => toggleMember(member.id)}
                   className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
                     split.selected
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      ? 'bg-cyan-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
                 >
                   {member.name}
@@ -220,8 +220,8 @@ export function SplitInput({
 
           {/* Total amount input */}
           {onAmountChange && (
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-indigo-100 border border-indigo-300">
-              <span className="flex-1 text-sm font-semibold text-indigo-900">
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-cyan-900/30 border border-cyan-600">
+              <span className="flex-1 text-sm font-semibold text-cyan-100">
                 Total
               </span>
               <div className="flex items-center gap-1">
@@ -232,9 +232,9 @@ export function SplitInput({
                   placeholder="0"
                   min="0"
                   step="0.01"
-                  className="w-20 border border-indigo-300 rounded px-2 py-1 text-right text-sm font-semibold"
+                  className="w-20 bg-gray-700 border border-cyan-600 rounded px-2 py-1 text-right text-sm font-semibold text-gray-100"
                 />
-                <span className="text-xs text-indigo-700 w-4">
+                <span className="text-xs text-cyan-300 w-4">
                   {currency}
                 </span>
               </div>
@@ -254,12 +254,12 @@ export function SplitInput({
               <div
                 key={member.id}
                 className={`flex items-center gap-2 p-2 rounded-lg ${
-                  isPayer ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50'
+                  isPayer ? 'bg-cyan-900/30 border border-cyan-700' : 'bg-gray-800'
                 }`}
               >
                 <span className="flex-1 text-sm font-medium truncate">
                   {member.name}
-                  {isPayer && <span className="text-indigo-600 ml-1">(payer)</span>}
+                  {isPayer && <span className="text-cyan-400 ml-1">(payer)</span>}
                 </span>
                 <div className="flex items-center gap-1">
                   <input
@@ -270,14 +270,14 @@ export function SplitInput({
                     onFocus={() => handleFocus(member.id, split.value)}
                     onBlur={() => handleBlur(member.id)}
                     placeholder="0"
-                    className="w-16 border rounded px-2 py-1 text-right text-sm"
+                    className="w-16 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-right text-sm text-gray-100"
                   />
-                  <span className="text-xs text-gray-500 w-4">
+                  <span className="text-xs text-gray-400 w-4">
                     {splitType === 'exact' ? currency : splitType === 'percentage' ? '%' : ''}
                   </span>
                 </div>
                 {splitType !== 'exact' && (
-                  <span className="text-xs text-gray-500 w-14 text-right">
+                  <span className="text-xs text-gray-400 w-14 text-right">
                     {formatCurrency(getCalculatedAmount(split), currency)}
                   </span>
                 )}

@@ -56,7 +56,7 @@ export function PasskeyList({ onAddNew }: PasskeyListProps) {
 
   if (loading) {
     return (
-      <div className="p-4 text-center text-gray-500">
+      <div className="p-4 text-center text-gray-400">
         Loading passkeys...
       </div>
     );
@@ -65,11 +65,11 @@ export function PasskeyList({ onAddNew }: PasskeyListProps) {
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Your Passkeys</h3>
+        <h3 className="text-lg font-semibold text-gray-100">Your Passkeys</h3>
         {onAddNew && (
           <button
             onClick={onAddNew}
-            className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+            className="text-sm text-cyan-400 hover:text-cyan-300 font-medium"
           >
             + Add New
           </button>
@@ -77,13 +77,13 @@ export function PasskeyList({ onAddNew }: PasskeyListProps) {
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-lg">
+          <p className="text-sm text-red-300">{error}</p>
         </div>
       )}
 
       {passkeys.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-gray-400">
           <div className="text-3xl mb-2">🔐</div>
           <p>No passkeys registered yet</p>
         </div>
@@ -92,15 +92,15 @@ export function PasskeyList({ onAddNew }: PasskeyListProps) {
           {passkeys.map((passkey) => (
             <div
               key={passkey.id}
-              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+              className="flex items-center justify-between p-3 bg-gray-700 rounded-lg"
             >
               <div className="flex items-center gap-3">
                 <div className="text-2xl">🔑</div>
                 <div>
-                  <div className="font-medium text-gray-900">
+                  <div className="font-medium text-gray-100">
                     {passkey.friendlyName || 'Passkey'}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-400">
                     Created {formatDate(passkey.createdAt)}
                     {passkey.lastUsedAt && (
                       <> · Last used {formatDate(passkey.lastUsedAt)}</>
@@ -111,7 +111,7 @@ export function PasskeyList({ onAddNew }: PasskeyListProps) {
               <button
                 onClick={() => handleDelete(passkey.id)}
                 disabled={deletingId === passkey.id || passkeys.length <= 1}
-                className="text-red-600 hover:text-red-800 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="text-red-400 hover:text-red-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 title={passkeys.length <= 1 ? 'Cannot delete your only passkey' : 'Remove passkey'}
               >
                 {deletingId === passkey.id ? 'Removing...' : 'Remove'}

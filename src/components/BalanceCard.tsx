@@ -19,23 +19,23 @@ export function BalanceCard({
   return (
     <div
       className={`p-4 rounded-lg border ${
-        isCurrentUser ? 'border-indigo-300 bg-indigo-50' : 'border-gray-200 bg-white'
+        isCurrentUser ? 'border-cyan-600 bg-cyan-900/30' : 'border-gray-700 bg-gray-800'
       }`}
     >
       <div className="flex justify-between items-center">
         <span className="font-medium">
           {balance.memberName}
           {isCurrentUser && (
-            <span className="text-xs text-indigo-600 ml-2">(You)</span>
+            <span className="text-xs text-cyan-400 ml-2">(You)</span>
           )}
         </span>
         <span
           className={`font-semibold ${
             isPositive
-              ? 'text-green-600'
+              ? 'text-green-400'
               : isNegative
-              ? 'text-red-600'
-              : 'text-gray-600'
+              ? 'text-red-400'
+              : 'text-gray-400'
           }`}
         >
           {isPositive && '+'}

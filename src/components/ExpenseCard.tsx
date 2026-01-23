@@ -58,7 +58,7 @@ export function ExpenseCard({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border p-4">
+    <div className="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-4">
       <div className="flex justify-between items-start mb-2">
         <div className="flex-1">
           {isEditing ? (
@@ -67,37 +67,37 @@ export function ExpenseCard({
                 type="text"
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
-                className="flex-1 border rounded px-2 py-1 text-sm"
+                className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-gray-100"
                 autoFocus
               />
               <button
                 onClick={handleSaveDescription}
                 disabled={saving}
-                className="text-green-600 text-sm font-medium"
+                className="text-green-400 text-sm font-medium"
               >
                 Save
               </button>
               <button
                 onClick={handleCancelEdit}
-                className="text-gray-500 text-sm"
+                className="text-gray-400 text-sm"
               >
                 Cancel
               </button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <h3 className="font-medium text-gray-900">{expense.description}</h3>
+              <h3 className="font-medium text-gray-100">{expense.description}</h3>
               {canEdit && (
                 <>
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="text-indigo-600 text-xs hover:text-indigo-800"
+                    className="text-cyan-400 text-xs hover:text-cyan-300"
                   >
                     Edit
                   </button>
                   <Link
                     to={`/edit/${expense.id}`}
-                    className="text-indigo-600 text-xs hover:text-indigo-800"
+                    className="text-cyan-400 text-xs hover:text-cyan-300"
                   >
                     Edit amounts
                   </Link>
@@ -105,10 +105,10 @@ export function ExpenseCard({
               )}
             </div>
           )}
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-400">
             Paid by {payer?.name || 'Unknown'}
             {creator && creator.id !== expense.paidBy && (
-              <span className="text-gray-400"> (added by {creator.name})</span>
+              <span className="text-gray-500"> (added by {creator.name})</span>
             )}
           </p>
         </div>
@@ -119,8 +119,8 @@ export function ExpenseCard({
           <span
             className={`text-xs px-2 py-0.5 rounded-full ${
               allSigned
-                ? 'bg-green-100 text-green-700'
-                : 'bg-yellow-100 text-yellow-700'
+                ? 'bg-green-900 text-green-300'
+                : 'bg-yellow-900 text-yellow-300'
             }`}
           >
             {allSigned ? 'Signed' : 'Pending'}
@@ -128,7 +128,7 @@ export function ExpenseCard({
         </div>
       </div>
 
-      <div className="mt-3 pt-3 border-t">
+      <div className="mt-3 pt-3 border-t border-gray-700">
         {/* Collapsed view: show only user's split */}
         {!expanded && userSplit && (
           <div
@@ -144,15 +144,15 @@ export function ExpenseCard({
                 />
                 Your share
                 {userSplit.signedOff && (
-                  <span className="text-xs text-green-600 font-medium">Signed</span>
+                  <span className="text-xs text-green-400 font-medium">Signed</span>
                 )}
               </span>
-              <span className="text-gray-600">
+              <span className="text-gray-400">
                 {formatCurrency(userSplit.amount, currency)}
               </span>
             </div>
             {expense.splits.length > 1 && (
-              <p className="text-xs text-indigo-600 mt-1">
+              <p className="text-xs text-cyan-400 mt-1">
                 Tap to see all {expense.splits.length} participants
               </p>
             )}
@@ -165,10 +165,10 @@ export function ExpenseCard({
             className="cursor-pointer"
             onClick={() => setExpanded(true)}
           >
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-400">
               {expense.splits.length} participant{expense.splits.length !== 1 ? 's' : ''}
             </p>
-            <p className="text-xs text-indigo-600 mt-1">
+            <p className="text-xs text-cyan-400 mt-1">
               Tap to see details
             </p>
           </div>
@@ -184,7 +184,7 @@ export function ExpenseCard({
               <p className="text-xs text-gray-500">
                 Split ({expense.splitType}):
               </p>
-              <p className="text-xs text-indigo-600">
+              <p className="text-xs text-cyan-400">
                 Tap to collapse
               </p>
             </div>
@@ -206,10 +206,10 @@ export function ExpenseCard({
                       ? `${getMemberName(split.memberId)} (you)`
                       : getMemberName(split.memberId)}
                     {split.signedOff && (
-                      <span className="text-xs text-green-600 font-medium">Signed</span>
+                      <span className="text-xs text-green-400 font-medium">Signed</span>
                     )}
                   </span>
-                  <span className="text-gray-600">
+                  <span className="text-gray-400">
                     {formatCurrency(split.amount, currency)}
                   </span>
                 </div>
@@ -220,19 +220,19 @@ export function ExpenseCard({
       </div>
 
       {showSignOff && userSplit && !userSplit.signedOff && (
-        <div className="mt-3 pt-3 border-t">
+        <div className="mt-3 pt-3 border-t border-gray-700">
           {userSplit.previousAmount !== undefined && (
-            <div className="mb-3 p-2 bg-orange-50 border border-orange-200 rounded-lg text-sm">
-              <p className="text-orange-800 font-medium">Amount changed</p>
-              <p className="text-orange-600">
+            <div className="mb-3 p-2 bg-orange-900/30 border border-orange-700 rounded-lg text-sm">
+              <p className="text-orange-200 font-medium">Amount changed</p>
+              <p className="text-orange-400">
                 {formatCurrency(userSplit.previousAmount, currency)} → {formatCurrency(userSplit.amount, currency)}
                 {userSplit.amount > userSplit.previousAmount && (
-                  <span className="text-red-600 ml-1">
+                  <span className="text-red-400 ml-1">
                     (+{formatCurrency(userSplit.amount - userSplit.previousAmount, currency)})
                   </span>
                 )}
                 {userSplit.amount < userSplit.previousAmount && (
-                  <span className="text-green-600 ml-1">
+                  <span className="text-green-400 ml-1">
                     (-{formatCurrency(userSplit.previousAmount - userSplit.amount, currency)})
                   </span>
                 )}
@@ -244,17 +244,17 @@ export function ExpenseCard({
       )}
 
       {onDelete && canEdit && (
-        <div className="mt-3 pt-3 border-t">
+        <div className="mt-3 pt-3 border-t border-gray-700">
           <button
             onClick={onDelete}
-            className="text-red-600 text-sm hover:text-red-700"
+            className="text-red-400 text-sm hover:text-red-300"
           >
             Delete expense
           </button>
         </div>
       )}
 
-      <p className="text-xs text-gray-400 mt-3">
+      <p className="text-xs text-gray-500 mt-3">
         {formatRelativeTime(expense.createdAt)}
       </p>
     </div>

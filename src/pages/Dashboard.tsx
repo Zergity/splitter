@@ -32,32 +32,32 @@ export function Dashboard() {
   return (
     <div className="space-y-6 pb-20">
       <div className="text-center py-6">
-        <h2 className="text-2xl font-bold text-gray-900">{group.name}</h2>
-        <p className="text-gray-500">{group.members.length} members</p>
+        <h2 className="text-2xl font-bold text-gray-100">{group.name}</h2>
+        <p className="text-gray-400">{group.members.length} members</p>
       </div>
 
       {!currentUser ? (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-          <p className="text-yellow-800">
+        <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-4 text-center">
+          <p className="text-yellow-200">
             Select your name from the dropdown above to get started
           </p>
         </div>
       ) : (
         <>
-          <div className="bg-white rounded-lg shadow-sm border p-6 text-center">
-            <p className="text-sm text-gray-500 mb-1">Your balance</p>
+          <div className="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-6 text-center">
+            <p className="text-sm text-gray-400 mb-1">Your balance</p>
             <p
               className={`text-3xl font-bold ${
                 currentUserBalance && currentUserBalance.balance > 0.01
-                  ? 'text-green-600'
+                  ? 'text-green-400'
                   : currentUserBalance && currentUserBalance.balance < -0.01
-                  ? 'text-red-600'
-                  : 'text-gray-600'
+                  ? 'text-red-400'
+                  : 'text-gray-400'
               }`}
             >
               {formatCurrency(currentUserBalance?.balance ?? 0, group.currency)}
             </p>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-gray-500 mt-1">
               (Based on signed expenses only)
             </p>
           </div>
@@ -65,34 +65,34 @@ export function Dashboard() {
           <div className="grid grid-cols-2 gap-4">
             <Link
               to="/pending"
-              className="bg-white rounded-lg shadow-sm border p-4 text-center hover:border-indigo-300"
+              className="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-4 text-center hover:border-cyan-500"
             >
-              <p className="text-2xl font-bold text-indigo-600">
+              <p className="text-2xl font-bold text-cyan-400">
                 {pendingForUser.length}
               </p>
-              <p className="text-sm text-gray-500">To sign off</p>
+              <p className="text-sm text-gray-400">To sign off</p>
             </Link>
             <Link
               to="/pending"
-              className="bg-white rounded-lg shadow-sm border p-4 text-center hover:border-indigo-300"
+              className="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-4 text-center hover:border-cyan-500"
             >
-              <p className="text-2xl font-bold text-orange-600">
+              <p className="text-2xl font-bold text-orange-400">
                 {waitingForOthers.length}
               </p>
-              <p className="text-sm text-gray-500">Awaiting others</p>
+              <p className="text-sm text-gray-400">Awaiting others</p>
             </Link>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <Link
               to="/add"
-              className="bg-indigo-600 text-white rounded-lg p-4 text-center font-medium hover:bg-indigo-700"
+              className="bg-cyan-600 text-white rounded-lg p-4 text-center font-medium hover:bg-cyan-700"
             >
               Add Expense
             </Link>
             <Link
               to="/balances"
-              className="bg-white border border-indigo-600 text-indigo-600 rounded-lg p-4 text-center font-medium hover:bg-indigo-50"
+              className="bg-gray-800 border border-cyan-500 text-cyan-400 rounded-lg p-4 text-center font-medium hover:bg-cyan-900/30"
             >
               View Balances
             </Link>
@@ -100,10 +100,10 @@ export function Dashboard() {
         </>
       )}
 
-      <div className="bg-white rounded-lg shadow-sm border p-4">
+      <div className="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-4">
         <h3 className="font-medium mb-3">Recent Activity</h3>
         {expenses.length === 0 ? (
-          <p className="text-gray-500 text-sm">No expenses yet</p>
+          <p className="text-gray-400 text-sm">No expenses yet</p>
         ) : (
           <div className="space-y-2">
             {expenses
@@ -114,11 +114,11 @@ export function Dashboard() {
                 return (
                   <div
                     key={expense.id}
-                    className="flex justify-between text-sm py-2 border-b last:border-0"
+                    className="flex justify-between text-sm py-2 border-b border-gray-700 last:border-0"
                   >
                     <div>
                       <p className="font-medium">{expense.description}</p>
-                      <p className="text-gray-500 text-xs">
+                      <p className="text-gray-400 text-xs">
                         by {payer?.name || 'Unknown'}
                       </p>
                     </div>

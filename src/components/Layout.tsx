@@ -13,7 +13,7 @@ export function Layout({ children }: LayoutProps) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-gray-600">Loading...</div>
+        <div className="text-lg text-gray-400">Loading...</div>
       </div>
     );
   }
@@ -21,16 +21,16 @@ export function Layout({ children }: LayoutProps) {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg text-red-600">Error: {error}</div>
+        <div className="text-lg text-red-400">Error: {error}</div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-gray-800 shadow-sm border-b border-gray-700">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-indigo-600">Splitter</h1>
+          <h1 className="text-xl font-bold text-cyan-400">Splitter</h1>
           <MemberSelector />
         </div>
       </header>

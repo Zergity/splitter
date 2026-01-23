@@ -10,8 +10,8 @@ export function PendingActions() {
     return (
       <div className="pb-20">
         <h2 className="text-xl font-bold mb-6">Pending Actions</h2>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-          <p className="text-yellow-800">
+        <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-4 text-center">
+          <p className="text-yellow-200">
             Select your name from the dropdown above to see your pending actions
           </p>
         </div>
@@ -38,8 +38,8 @@ export function PendingActions() {
           To Sign Off ({toSignOff.length})
         </h2>
         {toSignOff.length === 0 ? (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-            <p className="text-green-800">You're all caught up!</p>
+          <div className="bg-green-900/30 border border-green-700 rounded-lg p-4 text-center">
+            <p className="text-green-200">You're all caught up!</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -61,8 +61,8 @@ export function PendingActions() {
           Awaiting Others ({awaitingOthers.length})
         </h2>
         {awaitingOthers.length === 0 ? (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-            <p className="text-gray-600">No expenses waiting for others</p>
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-center">
+            <p className="text-gray-400">No expenses waiting for others</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -82,7 +82,7 @@ export function PendingActions() {
                     members={group.members}
                     currency={group.currency}
                   />
-                  <p className="text-sm text-orange-600 mt-2 px-4">
+                  <p className="text-sm text-orange-400 mt-2 px-4">
                     Waiting for: {pendingMembers.join(', ')}
                   </p>
                 </div>
