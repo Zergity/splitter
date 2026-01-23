@@ -38,17 +38,17 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   }
 };
 
-// Deduplicate members by name (case-insensitive), keeping the first occurrence
-function deduplicateMembers(members: Member[]): Member[] {
+// Check for duplicate names (case-insensitive)
+function findDuplicateName(members: Member[]): string | null {
   const seen = new Set<string>();
-  return members.filter((m) => {
+  for (const m of members) {
     const lowerName = m.name.toLowerCase();
     if (seen.has(lowerName)) {
-      return false;
+      return m.name;
     }
     seen.add(lowerName);
-    return true;
-  });
+  }
+  return null;
 }
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
@@ -57,10 +57,18 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     const existing = await context.env.SPLITTER_KV.get<Group>('group', 'json');
     const group = existing || DEFAULT_GROUP;
 
-    // Deduplicate members if provided
-    const members = updates.members
-      ? deduplicateMembers(updates.members)
-      : group.members;
+    // Check for duplicate names if members are being updated
+    let members = group.members;
+    if (updates.members) {
+      const duplicateName = findDuplicateName(updates.members);
+      if (duplicateName) {
+        return Response.json(
+          { success: false, error: `Name "${duplicateName}" already exists` },
+          { status: 400 }
+        );
+      }
+      members = updates.members;
+    }
 
     const updated: Group = {
       ...group,

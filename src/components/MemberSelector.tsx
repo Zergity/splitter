@@ -22,6 +22,7 @@ export function MemberSelector() {
 
   const [authFlow, setAuthFlow] = useState<AuthFlow>(null);
   const [newName, setNewName] = useState('');
+  const [registerError, setRegisterError] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
@@ -57,7 +58,18 @@ export function MemberSelector() {
   const handleRegister = async () => {
     if (!newName.trim()) return;
 
+    setRegisterError(null);
     clearWebAuthnError();
+
+    // Check if name already exists (case-insensitive)
+    const nameExists = group?.members.some(
+      m => m.name.toLowerCase() === newName.trim().toLowerCase()
+    );
+    if (nameExists) {
+      setRegisterError('Name already taken');
+      return;
+    }
+
     try {
       // Create new member
       const member = await addMember(newName.trim());
@@ -70,7 +82,7 @@ export function MemberSelector() {
       setNewName('');
       setAuthFlow(null);
     } catch {
-      // Error shown in UI
+      // Error shown in UI via webAuthnError
     }
   };
 
@@ -109,6 +121,7 @@ export function MemberSelector() {
   const handleCloseModal = () => {
     setAuthFlow(null);
     setNewName('');
+    setRegisterError(null);
     setEditName('');
     setEditError(null);
     clearWebAuthnError();
@@ -240,9 +253,9 @@ export function MemberSelector() {
               />
             </div>
 
-            {webAuthnError && (
+            {(webAuthnError || registerError) && (
               <div className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-lg">
-                <p className="text-sm text-red-300">{webAuthnError}</p>
+                <p className="text-sm text-red-300">{registerError || webAuthnError}</p>
               </div>
             )}
 
