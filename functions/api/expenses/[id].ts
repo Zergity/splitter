@@ -20,6 +20,8 @@ interface Expense {
   splitType: SplitType;
   splits: ExpenseSplit[];
   createdAt: string;
+  receiptUrl?: string;
+  receiptDate?: string;
 }
 
 async function getExpenses(kv: KVNamespace): Promise<Expense[]> {

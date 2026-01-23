@@ -36,6 +36,29 @@ export interface Expense {
   splitType: SplitType;
   splits: ExpenseSplit[];
   createdAt: string;
+  receiptUrl?: string;   // URL to receipt image in R2
+  receiptDate?: string;  // Date extracted from receipt
+}
+
+// Receipt line item extracted from OCR
+export interface ReceiptItem {
+  id: string;
+  description: string;
+  amount: number;
+  memberId?: string; // assigned member
+}
+
+// Receipt OCR result
+export interface ReceiptOCRResult {
+  success: boolean;
+  imageUrl: string;
+  extracted: {
+    items: ReceiptItem[];
+    date?: string;
+    merchant?: string;
+    total?: number;
+    confidence: number;
+  };
 }
 
 // API response types

@@ -16,3 +16,10 @@ id = "c23e2dd45e264bf29351ea5a0dd7eb40"
 RP_ID = "split.vietcha.in"
 RP_NAME = "Splitter"
 RP_ORIGIN = "https://split.vietcha.in"
+
+[[r2_buckets]]
+binding = "RECEIPTS_BUCKET"
+bucket_name = "splitter-receipts"
+
+[ai]
+binding = "AI"

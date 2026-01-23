@@ -1,162 +1,145 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { SplitInput } from '../components/SplitInput';
-import { SplitType } from '../types';
-import { calculateSplits, validateSplits } from '../utils/splits';
+import { ReceiptCapture } from '../components/ReceiptCapture';
+import { ReceiptItems } from '../components/ReceiptItems';
+import { ReceiptItem, ReceiptOCRResult } from '../types';
 import { roundNumber } from '../utils/balances';
-
-interface SplitValue {
-  memberId: string;
-  value: number;
-  selected: boolean;
-}
 
 export function AddExpense() {
   const navigate = useNavigate();
   const { group, currentUser, createExpense } = useApp();
 
   const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
   const [paidBy, setPaidBy] = useState(currentUser?.id || '');
-  const [splitType, setSplitType] = useState<SplitType>('exact');
-  const [splits, setSplits] = useState<SplitValue[]>(() =>
-    group?.members.map((m) => ({
-      memberId: m.id,
-      value: 0,
-      selected: m.id === currentUser?.id,
-    })) || []
-  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [receiptUrl, setReceiptUrl] = useState<string | undefined>(undefined);
+  const [receiptDate, setReceiptDate] = useState<string | undefined>(undefined);
+  const [items, setItems] = useState<ReceiptItem[]>([]);
+  const [manualTotal, setManualTotal] = useState<number | null>(null);
 
-  const amountNum = parseFloat(amount) || 0;
+  // Calculate totals from items, or use manual total if set
+  const itemsTotal = items.reduce((sum, i) => sum + i.amount, 0);
+  const totalAmount = manualTotal !== null ? manualTotal : itemsTotal;
 
-  // Track selected member IDs to detect selection changes
-  const selectedMemberIds = splits
-    .filter((s) => s.selected)
-    .map((s) => s.memberId)
-    .join(',');
+  // Calculate which members are included (have at least one item assigned)
+  const includedMemberIds = new Set(items.filter(i => i.memberId).map(i => i.memberId!));
 
-  // Auto-fill payer's value when amount, selection, or payer changes
-  useEffect(() => {
-    if (splitType === 'shares') return;
+  // Calculate splits from items, payer takes the rest
+  const calculateSplits = () => {
+    const memberTotals = new Map<string, number>();
+    for (const item of items) {
+      if (item.memberId && item.amount > 0) {
+        const current = memberTotals.get(item.memberId) || 0;
+        memberTotals.set(item.memberId, roundNumber(current + item.amount, 2));
+      }
+    }
 
-    const selected = splits.filter((s) => s.selected);
-    if (selected.length === 0) return;
+    // Payer takes the difference between total and items sum
+    if (paidBy && totalAmount > 0) {
+      const currentItemsSum = Array.from(memberTotals.values()).reduce((sum, v) => sum + v, 0);
+      const diff = roundNumber(totalAmount - currentItemsSum, 2);
+      if (Math.abs(diff) > 0.001) {
+        const payerCurrent = memberTotals.get(paidBy) || 0;
+        memberTotals.set(paidBy, roundNumber(payerCurrent + diff, 2));
+      }
+    }
 
-    // Find remainder recipient: payer if selected, otherwise first selected
-    const payerSelected = selected.find((s) => s.memberId === paidBy);
-    const recipientId = payerSelected ? paidBy : selected[0].memberId;
+    return memberTotals;
+  };
 
-    // Calculate sum of others
-    const othersSum = selected
-      .filter((s) => s.memberId !== recipientId)
-      .reduce((sum, s) => sum + s.value, 0);
+  const handleReceiptProcessed = (result: ReceiptOCRResult) => {
+    setReceiptUrl(result.imageUrl);
+    setItems(result.extracted.items);
 
-    const targetTotal = splitType === 'exact' ? amountNum : 100;
-    const remainder = Math.max(0, roundNumber(targetTotal - othersSum, 1));
+    if (result.extracted.merchant) {
+      setDescription(result.extracted.merchant);
+    }
+    if (result.extracted.date) {
+      setReceiptDate(result.extracted.date);
+    }
+  };
 
-    setSplits((prev) =>
-      prev.map((s) =>
-        s.memberId === recipientId ? { ...s, value: remainder } : s
-      )
-    );
-  }, [amountNum, paidBy, splitType, selectedMemberIds]);
+  const handleReceiptError = (errorMessage: string) => {
+    setError(errorMessage);
+  };
+
+  const handleClearReceipt = () => {
+    setItems([]);
+    setReceiptUrl(undefined);
+    setReceiptDate(undefined);
+    setDescription('');
+    setManualTotal(null);
+  };
+
+  const handleTotalChange = (value: string) => {
+    const parsed = parseFloat(value);
+    if (!isNaN(parsed) && parsed >= 0) {
+      // Calculate the difference between new total and current items sum
+      const currentSum = items.reduce((sum, i) => sum + i.amount, 0);
+      const diff = roundNumber(parsed - currentSum, 2);
+
+      if (Math.abs(diff) > 0.001 && items.length > 0) {
+        // Find payer's item or first item to adjust
+        const payerItem = items.find(i => i.memberId === paidBy);
+        const targetItem = payerItem || items[0];
+
+        // Update the target item's amount
+        const newAmount = roundNumber(targetItem.amount + diff, 2);
+        setItems(items.map(item =>
+          item.id === targetItem.id ? { ...item, amount: Math.max(0, newAmount) } : item
+        ));
+      }
+      setManualTotal(null); // Reset since we adjusted items
+    } else if (value === '' || value === '0') {
+      setManualTotal(null);
+    }
+  };
+
+  // Handle items change - also reset manualTotal so total auto-updates
+  const handleItemsChange = (newItems: ReceiptItem[]) => {
+    setItems(newItems);
+    setManualTotal(null); // Reset so total = sum of items
+  };
+
+  // Handle member tap - add to unassigned item or create new, or remove if included
+  const handleMemberTap = (memberId: string) => {
+    const isIncluded = includedMemberIds.has(memberId);
+
+    if (isIncluded) {
+      // Remove all assignments for this member
+      handleItemsChange(items.map(item =>
+        item.memberId === memberId ? { ...item, memberId: undefined } : item
+      ));
+    } else {
+      // Find first unassigned item
+      const unassignedItem = items.find(item => !item.memberId);
+      if (unassignedItem) {
+        // Assign to first unassigned item
+        handleItemsChange(items.map(item =>
+          item.id === unassignedItem.id ? { ...item, memberId } : item
+        ));
+      } else {
+        // Create new item for this member
+        const newItem: ReceiptItem = {
+          id: crypto.randomUUID(),
+          description: '',
+          amount: 0,
+          memberId,
+        };
+        handleItemsChange([...items, newItem]);
+      }
+    }
+  };
+
+  // Drag handlers for members
+  const handleMemberDragStart = (e: React.DragEvent, memberId: string) => {
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.setData('text/plain', memberId);
+  };
 
   if (!group) return null;
-  const selectedSplits = splits.filter((s) => s.selected);
-
-  // Calculate final amount for a split based on current type
-  const getCalculatedAmount = (split: SplitValue, type: SplitType): number => {
-    if (!split.selected) return 0;
-    const selected = splits.filter((s) => s.selected);
-
-    switch (type) {
-      case 'exact':
-        return split.value;
-      case 'percentage':
-        return (amountNum * split.value) / 100;
-      case 'shares': {
-        const totalShares = selected.reduce((sum, s) => sum + s.value, 0);
-        return totalShares > 0 ? (amountNum * split.value) / totalShares : 0;
-      }
-      default:
-        return split.value;
-    }
-  };
-
-  // Convert splits when changing split type to preserve final amounts
-  const handleSplitTypeChange = (newType: SplitType) => {
-    if (newType === splitType) return;
-
-    const selected = splits.filter((s) => s.selected);
-    if (selected.length === 0 || amountNum <= 0) {
-      setSplitType(newType);
-      return;
-    }
-
-    // Calculate current final amounts
-    const amounts = splits.map((s) => ({
-      memberId: s.memberId,
-      amount: getCalculatedAmount(s, splitType),
-      selected: s.selected,
-    }));
-
-    // Convert to new type values
-    const totalShares = selected.length; // For shares, use count as base
-    const newSplits = splits.map((s) => {
-      const currentAmount = amounts.find((a) => a.memberId === s.memberId)?.amount || 0;
-
-      let newValue: number;
-      switch (newType) {
-        case 'exact':
-          newValue = roundNumber(currentAmount, 1);
-          break;
-        case 'percentage':
-          newValue = amountNum > 0 ? roundNumber((currentAmount / amountNum) * 100, 1) : 0;
-          break;
-        case 'shares':
-          // Convert to shares proportionally, normalized to sum = totalShares
-          newValue = amountNum > 0 ? roundNumber((currentAmount / amountNum) * totalShares, 1) : 0;
-          break;
-        default:
-          newValue = roundNumber(currentAmount, 1);
-      }
-
-      return { ...s, value: s.selected ? newValue : s.value };
-    });
-
-    setSplits(newSplits);
-    setSplitType(newType);
-  };
-
-  const handleSplitEqually = () => {
-    const selectedCount = splits.filter((s) => s.selected).length;
-    if (selectedCount === 0) return;
-
-    let equalValue: number;
-    switch (splitType) {
-      case 'exact':
-        equalValue = amountNum > 0 ? roundNumber(amountNum / selectedCount, 1) : 0;
-        break;
-      case 'percentage':
-        equalValue = roundNumber(100 / selectedCount, 1);
-        break;
-      case 'shares':
-        equalValue = 1;
-        break;
-      default:
-        equalValue = 1;
-    }
-
-    setSplits(
-      splits.map((s) => ({
-        ...s,
-        value: s.selected ? equalValue : s.value,
-      }))
-    );
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,8 +150,8 @@ export function AddExpense() {
       return;
     }
 
-    if (amountNum <= 0) {
-      setError('Amount must be greater than 0');
+    if (totalAmount <= 0) {
+      setError('Total amount must be greater than 0');
       return;
     }
 
@@ -182,39 +165,33 @@ export function AddExpense() {
       return;
     }
 
-    if (selectedSplits.length === 0) {
-      setError('Select at least one participant');
-      return;
-    }
-
-    const validation = validateSplits(
-      amountNum,
-      splitType,
-      selectedSplits.map((s) => ({ memberId: s.memberId, value: s.value }))
-    );
-
-    if (!validation.valid) {
-      setError(validation.error || 'Invalid split');
+    const memberTotals = calculateSplits();
+    if (memberTotals.size === 0) {
+      setError('Assign at least one item to a member');
       return;
     }
 
     setSubmitting(true);
 
     try {
-      const calculatedSplits = calculateSplits(
-        amountNum,
-        splitType,
-        selectedSplits.map((s) => ({ memberId: s.memberId, value: s.value })),
-        paidBy
-      );
+      // Build splits from item assignments
+      const splits = Array.from(memberTotals.entries()).map(([memberId, amount]) => ({
+        memberId,
+        value: amount,
+        amount: amount,
+        signedOff: memberId === paidBy, // Auto sign-off for payer
+        signedAt: memberId === paidBy ? new Date().toISOString() : undefined,
+      }));
 
       await createExpense({
         description: description.trim(),
-        amount: amountNum,
+        amount: totalAmount,
         paidBy,
         createdBy: currentUser.id,
-        splitType,
-        splits: calculatedSplits,
+        splitType: 'exact',
+        splits,
+        receiptUrl,
+        receiptDate,
       });
 
       navigate('/expenses');
@@ -225,11 +202,25 @@ export function AddExpense() {
     }
   };
 
+  const hasItems = items.length > 0;
+
   return (
     <div className="pb-20">
       <h2 className="text-xl font-bold mb-6">Add Expense</h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Receipt capture - always show */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Scan Receipt (optional)
+          </label>
+          <ReceiptCapture
+            onProcessed={handleReceiptProcessed}
+            onError={handleReceiptError}
+            disabled={hasItems}
+          />
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1">
             Description
@@ -261,69 +252,83 @@ export function AddExpense() {
           </select>
         </div>
 
+        {/* Split between - draggable members */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Split between
-          </label>
-          <SplitInput
-            members={group.members}
-            splitType={splitType}
-            splits={splits}
-            totalAmount={amountNum}
-            currency={group.currency}
-            paidBy={paidBy}
-            onChange={setSplits}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Split type
-          </label>
-          <div className="flex gap-2">
-            {(['exact', 'percentage', 'shares'] as SplitType[]).map(
-              (type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => handleSplitTypeChange(type)}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium capitalize ${
-                    splitType === type
-                      ? 'bg-cyan-600 text-white'
+          <div className="flex justify-between items-center mb-2">
+            <label className="block text-sm font-medium text-gray-300">
+              Split between
+            </label>
+            {hasItems && (
+              <button
+                type="button"
+                onClick={handleClearReceipt}
+                className="text-sm text-red-400 hover:text-red-300"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {group.members.map((member) => {
+              const isIncluded = includedMemberIds.has(member.id);
+              return (
+                <div
+                  key={member.id}
+                  draggable
+                  onClick={() => handleMemberTap(member.id)}
+                  onDragStart={(e) => handleMemberDragStart(e, member.id)}
+                  className={`px-3 py-1.5 rounded-full text-sm cursor-grab active:cursor-grabbing select-none transition-colors ${
+                    isIncluded
+                      ? 'bg-cyan-600 text-white hover:bg-red-500'
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
                 >
-                  {type === 'percentage' ? '%' : type}
-                </button>
-              )
-            )}
+                  {member.name}
+                </div>
+              );
+            })}
           </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Drag to items or "+ Add item" below
+          </p>
         </div>
 
+        {/* Amounts section */}
         <div>
           <div className="flex justify-between items-center mb-2">
             <label className="block text-sm font-medium text-gray-300">
               Amounts
             </label>
-            <button
-              type="button"
-              onClick={handleSplitEqually}
-              className="text-sm text-cyan-400 hover:text-cyan-300 underline"
-            >
-              Split equally
-            </button>
+            {includedMemberIds.size > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  // Split total equally among selected members only
+                  const selectedMembers = Array.from(includedMemberIds);
+                  if (selectedMembers.length === 0) return;
+                  const splitAmount = roundNumber(totalAmount / selectedMembers.length, 2);
+                  const newItems: ReceiptItem[] = selectedMembers.map(memberId => ({
+                    id: crypto.randomUUID(),
+                    description: '',
+                    amount: splitAmount,
+                    memberId,
+                  }));
+                  handleItemsChange(newItems);
+                }}
+                className="text-sm text-cyan-400 hover:text-cyan-300"
+              >
+                Split equally
+              </button>
+            )}
           </div>
-          <SplitInput
+          <ReceiptItems
+            items={items}
             members={group.members}
-            splitType={splitType}
-            splits={splits}
-            totalAmount={amountNum}
             currency={group.currency}
-            paidBy={paidBy}
-            onChange={setSplits}
-            showAmounts
-            amountValue={amount}
-            onAmountChange={setAmount}
+            totalAmount={totalAmount}
+            onTotalChange={handleTotalChange}
+            onChange={handleItemsChange}
+            payerId={paidBy}
           />
         </div>
 
@@ -335,7 +340,7 @@ export function AddExpense() {
 
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || includedMemberIds.size === 0}
           className="w-full bg-cyan-600 text-white py-3 rounded-lg font-medium hover:bg-cyan-700 disabled:opacity-50"
         >
           {submitting ? 'Adding...' : 'Add Expense'}

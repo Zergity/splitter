@@ -1,4 +1,4 @@
-import { Group, Expense, ApiResponse } from '../types';
+import { Group, Expense, ApiResponse, ReceiptOCRResult } from '../types';
 
 const API_BASE = '/api';
 
@@ -63,6 +63,29 @@ export async function deleteExpense(id: string): Promise<void> {
   await fetchApi<void>(`/expenses/${id}`, {
     method: 'DELETE',
   });
+}
+
+// Receipt processing
+export async function processReceipt(file: File): Promise<ReceiptOCRResult> {
+  const formData = new FormData();
+  formData.append('receipt', file);
+
+  const response = await fetch(`${API_BASE}/receipts/process`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  const data: ApiResponse<{ imageUrl: string; extracted: ReceiptOCRResult['extracted'] }> = await response.json();
+
+  if (!data.success || !data.data) {
+    throw new Error(data.error || 'Failed to process receipt');
+  }
+
+  return {
+    success: true,
+    imageUrl: data.data.imageUrl,
+    extracted: data.data.extracted,
+  };
 }
 
 // Sign-off helper
