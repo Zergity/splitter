@@ -4,9 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "wrangler pages dev --proxy=5173 --compatibility-date=2024-01-01",
+    "dev:vite": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview",
+    "preview": "wrangler pages dev dist",
     "deploy": "npm run build && wrangler pages deploy dist"
   },
   "dependencies": {
