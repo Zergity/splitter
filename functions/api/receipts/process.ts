@@ -75,70 +75,55 @@ export const onRequestPost: PagesFunction<ReceiptsEnv> = async (context) => {
     // Process with Workers AI vision model
     let extracted: ExtractedData = { items: [], confidence: 0 };
 
-    // Check if AI binding is available (not available in local dev)
+    // Check if AI binding is available
     if (!context.env.AI) {
-      console.log('AI binding not available - using mock data for local dev');
-      // Return mock data for local development testing
-      extracted = {
-        items: [
-          { id: crypto.randomUUID(), description: 'Sample Item 1', amount: 12.99 },
-          { id: crypto.randomUUID(), description: 'Sample Item 2', amount: 8.50 },
-          { id: crypto.randomUUID(), description: 'Sample Item 3', amount: 15.00 },
-        ],
-        merchant: 'Test Store',
-        date: new Date().toISOString().split('T')[0],
-        total: 36.49,
-        confidence: 0.9,
-      };
+      return Response.json(
+        { success: false, error: 'AI binding not available' },
+        { status: 500 }
+      );
     } else {
       try {
-        // Convert to base64 for the AI model (chunked to avoid stack overflow)
-        let binary = '';
-        const chunkSize = 8192;
-        for (let i = 0; i < uint8Array.length; i += chunkSize) {
-          const chunk = uint8Array.subarray(i, i + chunkSize);
-          binary += String.fromCharCode.apply(null, chunk as unknown as number[]);
+        // First, accept the Llama license by sending "agree"
+        try {
+          await context.env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', {
+            prompt: 'agree',
+            max_tokens: 1,
+          });
+        } catch {
+          // License might already be accepted or this format doesn't work
         }
-        const base64Image = btoa(binary);
 
+        // Use Llama 3.2 Vision model
         const response = await context.env.AI.run(
           '@cf/meta/llama-3.2-11b-vision-instruct',
           {
-            messages: [
-              {
-                role: 'user',
-                content: [
-                  {
-                    type: 'image',
-                    image: base64Image,
-                  },
-                  {
-                    type: 'text',
-                    text: `Look at this receipt image carefully. Extract all purchased items with their prices.
+            image: Array.from(uint8Array),
+            prompt: `This is a Vietnamese receipt/bill. Extract purchased items with their UNIT PRICE (ĐG) and QUANTITY (SL).
 
-Return ONLY a JSON object in this exact format:
-{"items":[{"description":"item name","amount":12.99}],"merchant":"store name","date":"2024-01-15","total":25.99,"confidence":0.8}
+Return ONLY JSON in this format:
+{"items":[{"description":"item name","amount":"15.000","qty":2}],"merchant":"store name","total":"150.000"}
 
 Rules:
-- List every item with its price as a number
-- Skip tax, tips, subtotals
-- If you can't read something clearly, estimate or skip it
-- Return valid JSON only, no other text`,
-                  },
-                ],
-              },
-            ],
+- Extract each line item with: description, unit price (ĐG), quantity (SL)
+- amount = unit price (ĐG), NOT line total
+- qty = quantity (SL or Số Lượng), default 1 if not shown
+- Skip subtotals, tax, service fee, tips
+- Keep price format as string (e.g. "15.000")
+- JSON only, no other text`,
             max_tokens: 1024,
           }
         );
 
         console.log('AI response:', JSON.stringify(response));
 
-        // Parse the AI response
-        if (response && typeof response === 'object' && 'response' in response) {
-          const aiText = (response as { response: string }).response;
-          console.log('AI text:', aiText);
+        // Parse the AI response - LLaVA returns { description: string }
+        const aiText = response && typeof response === 'object'
+          ? ('description' in response ? (response as { description: string }).description
+            : 'response' in response ? (response as { response: string }).response : '')
+          : '';
+        console.log('AI text:', aiText);
 
+        if (aiText) {
           try {
             // Try to extract JSON from the response
             const jsonMatch = aiText.match(/\{[\s\S]*\}/);
@@ -149,16 +134,65 @@ Rules:
               const items: ReceiptItem[] = [];
               if (Array.isArray(parsed.items)) {
                 for (const item of parsed.items) {
-                  const amount = typeof item.amount === 'number' ? item.amount : parseFloat(item.amount);
-                  if (!isNaN(amount) && amount > 0) {
-                    items.push({
-                      id: crypto.randomUUID(),
-                      description: typeof item.description === 'string'
-                        ? item.description.slice(0, 40)
-                        : 'Item',
-                      amount: amount,
-                    });
+                  let amount: number;
+                  if (typeof item.amount === 'number') {
+                    amount = item.amount;
+                  } else if (typeof item.amount === 'string') {
+                    // Handle Vietnamese format: . as thousands, , as decimal
+                    // e.g., "15.000" = 15000, "15,50" = 15.5, "15.000,50" = 15000.5
+                    let normalized = item.amount
+                      .replace(/\./g, '')  // Remove . (thousands separator)
+                      .replace(',', '.');   // Convert , to . (decimal separator)
+                    amount = parseFloat(normalized);
+                  } else {
+                    amount = NaN;
                   }
+
+                  // Convert to K (divide by 1000) if >= 1000
+                  if (!isNaN(amount) && amount >= 1000) {
+                    amount = amount / 1000;
+                  }
+
+                  // Get quantity (default 1)
+                  let qty = 1;
+                  if (typeof item.qty === 'number' && item.qty > 0) {
+                    qty = Math.floor(item.qty);
+                  } else if (typeof item.qty === 'string') {
+                    const parsedQty = parseInt(item.qty, 10);
+                    if (!isNaN(parsedQty) && parsedQty > 0) {
+                      qty = parsedQty;
+                    }
+                  }
+
+                  // Create multiple items based on quantity
+                  if (!isNaN(amount) && amount > 0) {
+                    const description = typeof item.description === 'string'
+                      ? item.description.slice(0, 40)
+                      : 'Item';
+                    const finalAmount = Math.round(amount * 100) / 100;
+
+                    for (let i = 0; i < qty; i++) {
+                      items.push({
+                        id: crypto.randomUUID(),
+                        description,
+                        amount: finalAmount,
+                      });
+                    }
+                  }
+                }
+              }
+
+              // Parse total with same Vietnamese format handling
+              let total: number | undefined;
+              if (typeof parsed.total === 'number') {
+                total = parsed.total >= 1000 ? parsed.total / 1000 : parsed.total;
+              } else if (typeof parsed.total === 'string') {
+                let normalized = parsed.total
+                  .replace(/\./g, '')
+                  .replace(',', '.');
+                total = parseFloat(normalized);
+                if (!isNaN(total) && total >= 1000) {
+                  total = total / 1000;
                 }
               }
 
@@ -166,7 +200,7 @@ Rules:
                 items,
                 date: typeof parsed.date === 'string' ? parsed.date : undefined,
                 merchant: typeof parsed.merchant === 'string' ? parsed.merchant : undefined,
-                total: typeof parsed.total === 'number' ? parsed.total : undefined,
+                total: total && !isNaN(total) ? Math.round(total * 100) / 100 : undefined,
                 confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
               };
             }
@@ -177,18 +211,11 @@ Rules:
         }
       } catch (aiError) {
         console.error('AI processing error:', aiError);
-        // Fall back to mock data for testing when AI fails
-        extracted = {
-          items: [
-            { id: crypto.randomUUID(), description: 'Sample Item 1', amount: 12.99 },
-            { id: crypto.randomUUID(), description: 'Sample Item 2', amount: 8.50 },
-            { id: crypto.randomUUID(), description: 'Sample Item 3', amount: 15.00 },
-          ],
-          merchant: 'Test Store (AI unavailable)',
-          date: new Date().toISOString().split('T')[0],
-          total: 36.49,
-          confidence: 0.5,
-        };
+        const errorMessage = aiError instanceof Error ? aiError.message : String(aiError);
+        return Response.json(
+          { success: false, error: `AI processing failed: ${errorMessage}` },
+          { status: 500 }
+        );
       }
     }
 
