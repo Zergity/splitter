@@ -1,82 +1,70 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { useAuthContext, AuthModal, PasskeyAuth } from './auth';
-import type { Member, AuthMode } from '../types';
+import { useAuthContext, AuthModal } from './auth';
+
+type AuthFlow = 'signin' | 'register' | null;
 
 export function MemberSelector() {
   const { group, currentUser, setCurrentUser, addMember } = useApp();
-  const { authenticated, session, loading: authLoading, logout, checkHasPasskeys, isSupported } = useAuthContext();
-  const [isAdding, setIsAdding] = useState(false);
+  const {
+    authenticated,
+    session,
+    loading: authLoading,
+    isSupported,
+    webAuthnLoading,
+    webAuthnError,
+    authenticate,
+    register,
+    logout,
+    clearWebAuthnError,
+  } = useAuthContext();
+
+  const [authFlow, setAuthFlow] = useState<AuthFlow>(null);
   const [newName, setNewName] = useState('');
-  const [authModal, setAuthModal] = useState<{ member: Member; mode: AuthMode } | null>(null);
 
   // Sync current user with auth session
   useEffect(() => {
     if (authLoading || !group) return;
 
     if (authenticated && session) {
-      // User is authenticated - find the member and set as current user
       const member = group.members.find((m) => m.id === session.memberId);
       if (member && currentUser?.id !== member.id) {
         setCurrentUser(member);
       }
     } else if (!authenticated && currentUser) {
-      // User is not authenticated but has a current user - clear it
       setCurrentUser(null);
     }
   }, [authenticated, session, authLoading, group, currentUser, setCurrentUser]);
 
-  if (!group) return null;
+  const handleSignIn = async () => {
+    clearWebAuthnError();
+    setAuthFlow('signin');
+    try {
+      await authenticate();
+      setAuthFlow(null);
+    } catch {
+      // Error shown in UI
+    }
+  };
 
-  const handleAddMember = async () => {
-    if (newName.trim()) {
-      // Backend deduplicates - if name exists, it removes duplicates
-      const newMember = await addMember(newName.trim());
-      setNewName('');
-      setIsAdding(false);
+  const handleRegister = async () => {
+    if (!newName.trim()) return;
 
-      // If we got a new member back, prompt them to set up a passkey
-      if (newMember && isSupported) {
-        setAuthModal({ member: newMember, mode: 'register' });
+    clearWebAuthnError();
+    try {
+      // Create new member
+      const member = await addMember(newName.trim());
+      if (!member) {
+        throw new Error('Failed to create member');
       }
+
+      // Register passkey for new member
+      await register(member.id, member.name);
+      setNewName('');
+      setAuthFlow(null);
+    } catch {
+      // Error shown in UI
     }
-  };
-
-  const handleSelectMember = async (memberId: string) => {
-    if (!memberId) {
-      // User selected "Select user" option - do nothing or logout
-      return;
-    }
-
-    const member = group.members.find((m) => m.id === memberId);
-    if (!member) return;
-
-    // Check if user is already authenticated as this member
-    if (authenticated && currentUser?.id === memberId) {
-      return; // Already logged in as this user
-    }
-
-    // Check if member has passkeys
-    const hasPasskeys = await checkHasPasskeys(memberId);
-
-    if (hasPasskeys) {
-      // Member has passkeys - show login modal
-      setAuthModal({ member, mode: 'login' });
-    } else {
-      // Member has no passkeys - show registration modal
-      setAuthModal({ member, mode: 'register' });
-    }
-  };
-
-  const handleAuthSuccess = () => {
-    if (authModal) {
-      setCurrentUser(authModal.member);
-    }
-    setAuthModal(null);
-  };
-
-  const handleAuthCancel = () => {
-    setAuthModal(null);
   };
 
   const handleLogout = async () => {
@@ -84,85 +72,139 @@ export function MemberSelector() {
     setCurrentUser(null);
   };
 
+  const handleCloseModal = () => {
+    setAuthFlow(null);
+    setNewName('');
+    clearWebAuthnError();
+  };
+
+  if (!isSupported) {
+    return (
+      <div className="text-sm text-red-600">
+        Passkeys not supported
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (authLoading) {
+    return <div className="text-sm text-gray-500">Loading...</div>;
+  }
+
+  // Authenticated state
+  if (authenticated && currentUser) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-gray-700">
+          {currentUser.name}
+        </span>
+        <button
+          onClick={handleLogout}
+          className="text-gray-500 hover:text-gray-700 text-sm"
+        >
+          Logout
+        </button>
+      </div>
+    );
+  }
+
+  // Not authenticated state
   return (
     <>
       <div className="flex items-center gap-2">
-        {isAdding ? (
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAddMember()}
-              placeholder="Name"
-              className="border rounded px-2 py-1 text-sm w-24"
-              autoFocus
-            />
-            <button
-              onClick={handleAddMember}
-              className="text-indigo-600 text-sm font-medium"
-            >
-              Add
-            </button>
-            <button
-              onClick={() => {
-                setIsAdding(false);
-                setNewName('');
-              }}
-              className="text-gray-500 text-sm"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <>
-            {authenticated && currentUser ? (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">
-                  {currentUser.name}
-                </span>
-                <button
-                  onClick={handleLogout}
-                  className="text-gray-500 hover:text-gray-700 text-sm"
-                >
-                  Logout
-                </button>
-              </div>
-            ) : (
-              <>
-                <select
-                  value=""
-                  onChange={(e) => handleSelectMember(e.target.value)}
-                  className="border rounded px-2 py-1 text-sm"
-                >
-                  <option value="">Select user</option>
-                  {group.members.map((member) => (
-                    <option key={member.id} value={member.id}>
-                      {member.name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={() => setIsAdding(true)}
-                  className="text-indigo-600 text-sm font-medium"
-                >
-                  + Add
-                </button>
-              </>
-            )}
-          </>
-        )}
+        <button
+          onClick={handleSignIn}
+          disabled={webAuthnLoading}
+          className="px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 disabled:opacity-50"
+        >
+          {webAuthnLoading && authFlow === 'signin' ? 'Signing in...' : 'Sign In'}
+        </button>
+        <button
+          onClick={() => setAuthFlow('register')}
+          disabled={webAuthnLoading}
+          className="text-indigo-600 text-sm font-medium hover:text-indigo-800 disabled:opacity-50"
+        >
+          New User
+        </button>
       </div>
 
-      <AuthModal isOpen={!!authModal} onClose={handleAuthCancel}>
-        {authModal && (
-          <PasskeyAuth
-            member={authModal.member}
-            mode={authModal.mode}
-            onSuccess={handleAuthSuccess}
-            onCancel={handleAuthCancel}
-          />
-        )}
+      <AuthModal isOpen={authFlow === 'register'} onClose={handleCloseModal}>
+        <div className="p-6">
+          <div className="text-center">
+            <div className="text-4xl mb-4">👤</div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Create Account</h2>
+            <p className="text-gray-600 mb-6">
+              Enter your name to create an account with passkey authentication.
+            </p>
+
+            <div className="mb-6">
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+                placeholder="Your name"
+                className="w-full border rounded-lg px-3 py-2 text-center"
+                autoFocus
+                disabled={webAuthnLoading}
+              />
+            </div>
+
+            {webAuthnError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-700">{webAuthnError}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleCloseModal}
+                disabled={webAuthnLoading}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRegister}
+                disabled={webAuthnLoading || !newName.trim()}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {webAuthnLoading ? 'Creating...' : 'Create Account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </AuthModal>
+
+      <AuthModal isOpen={authFlow === 'signin' && !!webAuthnError} onClose={handleCloseModal}>
+        <div className="p-6">
+          <div className="text-center">
+            <div className="text-4xl mb-4">🔐</div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Sign In Failed</h2>
+
+            {webAuthnError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-700">{webAuthnError}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleCloseModal}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSignIn}
+                disabled={webAuthnLoading}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        </div>
       </AuthModal>
     </>
   );

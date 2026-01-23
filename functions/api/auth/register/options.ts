@@ -31,9 +31,8 @@ export const onRequestPost: PagesFunction<AuthEnv> = async (context) => {
         transports: cred.transports,
       })),
       authenticatorSelection: {
-        residentKey: 'preferred',
+        residentKey: 'required', // Required for discoverable credentials
         userVerification: 'preferred',
-        authenticatorAttachment: 'platform', // Prefer platform authenticators (Touch ID, Face ID)
       },
     });
 

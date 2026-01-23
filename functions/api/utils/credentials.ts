@@ -131,7 +131,7 @@ export async function hasPasskeys(
   return credentials.length > 0;
 }
 
-// Find a credential by ID
+// Find a credential by ID for a specific member
 export async function findCredentialById(
   env: AuthEnv,
   memberId: string,
@@ -139,4 +139,25 @@ export async function findCredentialById(
 ): Promise<StoredCredential | null> {
   const credentials = await getCredentials(env, memberId);
   return credentials.find(c => c.id === credentialId) || null;
+}
+
+// Find credential owner by searching all credentials
+// Returns the memberId and credential if found
+export async function findCredentialOwner(
+  env: AuthEnv,
+  credentialId: string
+): Promise<{ memberId: string; credential: StoredCredential } | null> {
+  // List all keys that start with 'credentials:'
+  const list = await env.SPLITTER_KV.list({ prefix: 'credentials:' });
+
+  for (const key of list.keys) {
+    const memberId = key.name.replace('credentials:', '');
+    const credentials = await getCredentials(env, memberId);
+    const credential = credentials.find(c => c.id === credentialId);
+    if (credential) {
+      return { memberId, credential };
+    }
+  }
+
+  return null;
 }

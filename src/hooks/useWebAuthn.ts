@@ -15,8 +15,7 @@ interface WebAuthnState {
 interface UseWebAuthnReturn extends WebAuthnState {
   isSupported: boolean;
   register: (memberId: string, memberName: string, friendlyName?: string) => Promise<SessionInfo>;
-  authenticate: (memberId: string) => Promise<SessionInfo>;
-  checkHasPasskeys: (memberId: string) => Promise<boolean>;
+  authenticate: () => Promise<SessionInfo>;
   clearError: () => void;
 }
 
@@ -59,19 +58,19 @@ export function useWebAuthn(): UseWebAuthnReturn {
     }
   }, []);
 
-  const authenticate = useCallback(async (memberId: string): Promise<SessionInfo> => {
+  const authenticate = useCallback(async (): Promise<SessionInfo> => {
     setLoading(true);
     setError(null);
 
     try {
-      // Get authentication options from server
-      const options = await authApi.getLoginOptions(memberId);
+      // Get authentication options from server (discoverable credentials)
+      const options = await authApi.getLoginOptions();
 
-      // Start WebAuthn authentication (shows biometric prompt)
+      // Start WebAuthn authentication (shows biometric prompt with all available passkeys)
       const credential = await startAuthentication({ optionsJSON: options });
 
       // Verify with server and get session
-      const session = await authApi.verifyLogin(memberId, credential);
+      const session = await authApi.verifyLogin(credential);
 
       return session;
     } catch (err) {
@@ -80,14 +79,6 @@ export function useWebAuthn(): UseWebAuthnReturn {
       throw err;
     } finally {
       setLoading(false);
-    }
-  }, []);
-
-  const checkHasPasskeys = useCallback(async (memberId: string): Promise<boolean> => {
-    try {
-      return await authApi.checkHasPasskeys(memberId);
-    } catch {
-      return false;
     }
   }, []);
 
@@ -101,7 +92,6 @@ export function useWebAuthn(): UseWebAuthnReturn {
     isSupported,
     register,
     authenticate,
-    checkHasPasskeys,
     clearError,
   };
 }

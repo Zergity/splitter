@@ -77,29 +77,26 @@ export async function verifyRegistration(
   return result.session;
 }
 
-// Login
-export async function getLoginOptions(
-  memberId: string
-): Promise<PublicKeyCredentialRequestOptionsJSON> {
+// Login (discoverable credentials - no memberId needed)
+export async function getLoginOptions(): Promise<PublicKeyCredentialRequestOptionsJSON> {
   const result = await fetchAuthApi<{ options: PublicKeyCredentialRequestOptionsJSON }>(
     '/login/options',
     {
       method: 'POST',
-      body: JSON.stringify({ memberId }),
+      body: JSON.stringify({}),
     }
   );
   return result.options;
 }
 
 export async function verifyLogin(
-  memberId: string,
   credential: unknown
 ): Promise<SessionInfo> {
   const result = await fetchAuthApi<{ verified: boolean; session: SessionInfo }>(
     '/login/verify',
     {
       method: 'POST',
-      body: JSON.stringify({ memberId, credential }),
+      body: JSON.stringify({ credential }),
     }
   );
   if (!result.session) {

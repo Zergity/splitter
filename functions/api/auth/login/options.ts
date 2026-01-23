@@ -1,44 +1,21 @@
 import { generateAuthenticationOptions } from '@simplewebauthn/server';
-import type { AuthEnv, LoginOptionsRequest } from '../../types/auth';
+import type { AuthEnv } from '../../types/auth';
 import { storeChallenge } from '../../utils/challenges';
-import { getCredentials, hasPasskeys } from '../../utils/credentials';
 
 export const onRequestPost: PagesFunction<AuthEnv> = async (context) => {
   try {
-    const { memberId } = await context.request.json() as LoginOptionsRequest;
-
-    if (!memberId) {
-      return Response.json(
-        { success: false, error: 'memberId is required' },
-        { status: 400 }
-      );
-    }
-
     const env = context.env;
 
-    // Check if user has any registered passkeys
-    const hasKeys = await hasPasskeys(env, memberId);
-    if (!hasKeys) {
-      return Response.json(
-        { success: false, error: 'No passkeys registered for this user', code: 'NO_PASSKEYS' },
-        { status: 404 }
-      );
-    }
-
-    // Get user's credentials
-    const credentials = await getCredentials(env, memberId);
-
+    // Generate authentication options for discoverable credentials
+    // No allowCredentials = browser will show all available passkeys for this RP
     const options = await generateAuthenticationOptions({
       rpID: env.RP_ID || 'localhost',
-      allowCredentials: credentials.map(cred => ({
-        id: cred.id,
-        transports: cred.transports,
-      })),
       userVerification: 'preferred',
+      // Empty allowCredentials for discoverable credential flow
     });
 
-    // Store challenge for verification
-    await storeChallenge(env, memberId, options.challenge, 'authentication');
+    // Store challenge with a temporary ID (will be resolved during verification)
+    await storeChallenge(env, `login:${options.challenge}`, options.challenge, 'authentication');
 
     return Response.json({
       success: true,

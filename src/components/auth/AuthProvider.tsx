@@ -8,8 +8,7 @@ interface AuthContextType extends AuthState {
   webAuthnLoading: boolean;
   webAuthnError: string | null;
   register: (memberId: string, memberName: string, friendlyName?: string) => Promise<SessionInfo>;
-  authenticate: (memberId: string) => Promise<SessionInfo>;
-  checkHasPasskeys: (memberId: string) => Promise<boolean>;
+  authenticate: () => Promise<SessionInfo>;
   logout: () => Promise<void>;
   setSession: (session: SessionInfo) => void;
   listPasskeys: () => Promise<PasskeyInfo[]>;
@@ -30,9 +29,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return session;
   };
 
-  // Wrap authenticate to also update auth state
-  const authenticate = async (memberId: string): Promise<SessionInfo> => {
-    const session = await webAuthn.authenticate(memberId);
+  // Wrap authenticate to also update auth state (discoverable credentials)
+  const authenticate = async (): Promise<SessionInfo> => {
+    const session = await webAuthn.authenticate();
     auth.setSession(session);
     return session;
   };
@@ -51,7 +50,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Actions
     register,
     authenticate,
-    checkHasPasskeys: webAuthn.checkHasPasskeys,
     logout: auth.logout,
     setSession: auth.setSession,
     listPasskeys: auth.listPasskeys,

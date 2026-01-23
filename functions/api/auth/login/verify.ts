@@ -1,46 +1,53 @@
 import { verifyAuthenticationResponse } from '@simplewebauthn/server';
-import type { AuthEnv, LoginVerifyRequest } from '../../types/auth';
+import type { AuthEnv } from '../../types/auth';
 import { consumeChallenge } from '../../utils/challenges';
-import { getCredentials, updateCredential, base64ToUint8Array } from '../../utils/credentials';
+import { updateCredential, base64ToUint8Array, findCredentialOwner } from '../../utils/credentials';
 import { createSession, createAuthCookie } from '../../utils/jwt';
 
-// Helper to get member name from group data
-async function getMemberName(env: AuthEnv, memberId: string): Promise<string | null> {
+// Helper to get member from group data
+async function getMember(env: AuthEnv, memberId: string): Promise<{ id: string; name: string } | null> {
   const group = await env.SPLITTER_KV.get<{ members: { id: string; name: string }[] }>('group', 'json');
   if (!group) return null;
-  const member = group.members.find(m => m.id === memberId);
-  return member?.name || null;
+  return group.members.find(m => m.id === memberId) || null;
 }
 
 export const onRequestPost: PagesFunction<AuthEnv> = async (context) => {
   try {
-    const { memberId, credential } = await context.request.json() as LoginVerifyRequest;
+    const { credential } = await context.request.json() as { credential: any };
 
-    if (!memberId || !credential) {
+    if (!credential) {
       return Response.json(
-        { success: false, error: 'memberId and credential are required' },
+        { success: false, error: 'credential is required' },
         { status: 400 }
       );
     }
 
     const env = context.env;
 
-    // Get and consume the challenge (one-time use)
-    const expectedChallenge = await consumeChallenge(env, memberId, 'authentication');
-    if (!expectedChallenge) {
+    // Find the credential owner by looking up the credential ID
+    const credentialData = await findCredentialOwner(env, credential.id);
+    if (!credentialData) {
       return Response.json(
-        { success: false, error: 'Challenge expired or not found. Please try again.' },
+        { success: false, error: 'Passkey not found. Please register first.' },
         { status: 400 }
       );
     }
 
-    // Get the stored credential
-    const credentials = await getCredentials(env, memberId);
-    const storedCredential = credentials.find(c => c.id === credential.id);
+    const { memberId, credential: storedCredential } = credentialData;
 
-    if (!storedCredential) {
+    // Get and consume the challenge (one-time use)
+    // Challenge was stored with the challenge value as part of the key
+    const expectedChallenge = await consumeChallenge(env, `login:${credential.response.clientDataJSON}`, 'authentication');
+
+    // For discoverable credentials, we stored challenge differently
+    // Let's try to get it by the challenge in the response
+    const clientDataJSON = JSON.parse(atob(credential.response.clientDataJSON));
+    const challenge = clientDataJSON.challenge;
+
+    const validChallenge = await consumeChallenge(env, `login:${challenge}`, 'authentication');
+    if (!validChallenge) {
       return Response.json(
-        { success: false, error: 'Credential not found' },
+        { success: false, error: 'Challenge expired or not found. Please try again.' },
         { status: 400 }
       );
     }
@@ -52,7 +59,7 @@ export const onRequestPost: PagesFunction<AuthEnv> = async (context) => {
     // Verify the authentication response
     const verification = await verifyAuthenticationResponse({
       response: credential,
-      expectedChallenge,
+      expectedChallenge: validChallenge,
       expectedOrigin: origin,
       expectedRPID: rpID,
       credential: {
@@ -76,9 +83,9 @@ export const onRequestPost: PagesFunction<AuthEnv> = async (context) => {
       lastUsedAt: new Date().toISOString(),
     });
 
-    // Get member name
-    const memberName = await getMemberName(env, memberId);
-    if (!memberName) {
+    // Get member info
+    const member = await getMember(env, memberId);
+    if (!member) {
       return Response.json(
         { success: false, error: 'Member not found' },
         { status: 400 }
@@ -86,7 +93,7 @@ export const onRequestPost: PagesFunction<AuthEnv> = async (context) => {
     }
 
     // Create session
-    const { session, token } = await createSession(env, memberId, memberName);
+    const { session, token } = await createSession(env, memberId, member.name);
 
     // Set cookie and return response
     return new Response(
@@ -110,8 +117,9 @@ export const onRequestPost: PagesFunction<AuthEnv> = async (context) => {
     );
   } catch (error) {
     console.error('Login verification error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return Response.json(
-      { success: false, error: 'Failed to verify authentication' },
+      { success: false, error: `Failed to verify authentication: ${errorMessage}` },
       { status: 500 }
     );
   }
