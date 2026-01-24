@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { ExpenseCard } from '../components/ExpenseCard';
 import { getDateKey, formatDateHeader } from '../utils/balances';
-import { Expense } from '../types';
+import { Expense, Member } from '../types';
 
 export function Expenses() {
   const { group, expenses, currentUser, deleteExpense } = useApp();
@@ -61,16 +61,84 @@ export function Expenses() {
     }
   };
 
+  const getMemberName = (id: string, members: Member[]) =>
+    members.find((m) => m.id === id)?.name || 'Unknown';
+
+  const exportToCSV = () => {
+    if (!group) return;
+
+    // CSV header
+    const headers = ['Date', 'Description', 'Amount', 'Currency', 'Paid By', 'Participant', 'Share', 'Status'];
+
+    // Build CSV rows - one row per split
+    const rows: string[][] = [];
+
+    sortedExpenses.forEach((expense) => {
+      const date = new Date(expense.createdAt).toISOString().split('T')[0];
+      const payer = getMemberName(expense.paidBy, group.members);
+
+      expense.splits.forEach((split) => {
+        const participant = getMemberName(split.memberId, group.members);
+        const status = split.signedOff ? 'Signed' : 'Pending';
+
+        rows.push([
+          date,
+          expense.description,
+          expense.amount.toString(),
+          group.currency,
+          payer,
+          participant,
+          split.amount.toString(),
+          status,
+        ]);
+      });
+    });
+
+    // Convert to CSV string
+    const escapeCSV = (str: string) => {
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const csvContent = [
+      headers.map(escapeCSV).join(','),
+      ...rows.map((row) => row.map(escapeCSV).join(',')),
+    ].join('\n');
+
+    // Download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${group.name.replace(/[^a-zA-Z0-9]/g, '_')}_expenses_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="pb-20">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold">All Expenses</h2>
-        <Link
-          to="/add"
-          className="bg-cyan-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
-        >
-          + Add
-        </Link>
+        <div className="flex gap-2">
+          {expenses.length > 0 && (
+            <button
+              onClick={exportToCSV}
+              className="bg-gray-700 text-gray-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-600"
+            >
+              Export CSV
+            </button>
+          )}
+          <Link
+            to="/add"
+            className="bg-cyan-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+          >
+            + Add
+          </Link>
+        </div>
       </div>
 
       {currentUser && (
