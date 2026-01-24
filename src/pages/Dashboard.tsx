@@ -29,6 +29,23 @@ export function Dashboard() {
       )
     : [];
 
+  // Calculate total pending amounts
+  const toSignOffAmount = currentUser
+    ? pendingForUser.reduce((sum, e) => {
+        const userSplit = e.splits.find((s) => s.memberId === currentUser.id && !s.signedOff);
+        return sum + (userSplit?.amount || 0);
+      }, 0)
+    : 0;
+
+  const awaitingOthersAmount = currentUser
+    ? waitingForOthers.reduce((sum, e) => {
+        const othersUnsigned = e.splits
+          .filter((s) => !s.signedOff && s.memberId !== currentUser.id)
+          .reduce((s, split) => s + split.amount, 0);
+        return sum + othersUnsigned;
+      }, 0)
+    : 0;
+
   return (
     <div className="space-y-6 pb-20">
       <div className="text-center py-6">
@@ -46,19 +63,23 @@ export function Dashboard() {
         <>
           <div className="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-6 text-center">
             <p className="text-sm text-gray-400 mb-1">Your balance</p>
-            <p
-              className={`text-3xl font-bold ${
-                currentUserBalance && currentUserBalance.balance > 0.01
-                  ? 'text-green-400'
-                  : currentUserBalance && currentUserBalance.balance < -0.01
-                  ? 'text-red-400'
-                  : 'text-gray-400'
-              }`}
-            >
-              {formatCurrency(currentUserBalance?.balance ?? 0, group.currency)}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              (Based on signed expenses only)
+            <p className="text-3xl font-bold">
+              <span
+                className={
+                  currentUserBalance && currentUserBalance.signedBalance > 0.01
+                    ? 'text-green-400'
+                    : currentUserBalance && currentUserBalance.signedBalance < -0.01
+                    ? 'text-red-400'
+                    : 'text-gray-400'
+                }
+              >
+                {formatCurrency(currentUserBalance?.signedBalance ?? 0, group.currency)}
+              </span>
+              {currentUserBalance && Math.abs(currentUserBalance.pendingBalance) > 0.01 && (
+                <span className={`text-xl ml-1 opacity-50 ${currentUserBalance.pendingBalance > 0 ? 'text-green-500' : 'text-red-400'}`}>
+                  ({currentUserBalance.pendingBalance > 0 ? '+' : ''}{formatCurrency(currentUserBalance.pendingBalance, group.currency)})
+                </span>
+              )}
             </p>
           </div>
 
@@ -71,6 +92,11 @@ export function Dashboard() {
                 {pendingForUser.length}
               </p>
               <p className="text-sm text-gray-400">To sign off</p>
+              {toSignOffAmount > 0 && (
+                <p className="text-xs text-red-400 mt-1">
+                  {formatCurrency(toSignOffAmount, group.currency)}
+                </p>
+              )}
             </Link>
             <Link
               to="/pending"
@@ -80,6 +106,11 @@ export function Dashboard() {
                 {waitingForOthers.length}
               </p>
               <p className="text-sm text-gray-400">Awaiting others</p>
+              {awaitingOthersAmount > 0 && (
+                <p className="text-xs text-green-400 mt-1">
+                  {formatCurrency(awaitingOthersAmount, group.currency)}
+                </p>
+              )}
             </Link>
           </div>
 

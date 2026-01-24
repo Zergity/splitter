@@ -10,15 +10,12 @@ export function Balances() {
   const balances = calculateBalances(expenses, group.members);
   const settlements = calculateSettlements(balances);
 
-  const sortedBalances = [...balances].sort((a, b) => b.balance - a.balance);
+  const sortedBalances = [...balances].sort((a, b) => b.signedBalance - a.signedBalance);
 
   return (
     <div className="pb-20 space-y-8">
       <section>
         <h2 className="text-xl font-bold mb-4">Balances</h2>
-        <p className="text-sm text-gray-400 mb-4">
-          Based on signed expenses only
-        </p>
 
         {group.members.length === 0 ? (
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-center">
@@ -83,8 +80,9 @@ export function Balances() {
         <ul className="text-sm text-gray-400 space-y-1">
           <li>Positive balance = you are owed money</li>
           <li>Negative balance = you owe money</li>
-          <li>Only signed expenses count toward balances</li>
-          <li>Settlement suggestions minimize the number of transactions</li>
+          <li><span className="text-green-500">Signed</span> = confirmed expenses</li>
+          <li><span className="text-yellow-500">Pending</span> = awaiting sign-off</li>
+          <li>Settlement suggestions based on signed balances only</li>
         </ul>
       </section>
     </div>

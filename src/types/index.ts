@@ -71,7 +71,9 @@ export interface ApiResponse<T> {
 export interface MemberBalance {
   memberId: string;
   memberName: string;
-  balance: number; // positive = owed money, negative = owes money
+  signedBalance: number; // balance from signed expenses
+  pendingBalance: number; // balance from pending (unsigned) expenses
+  balance: number; // total balance (signed + pending)
 }
 
 export interface Settlement {

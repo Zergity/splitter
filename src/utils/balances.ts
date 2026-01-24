@@ -4,64 +4,82 @@ export function calculateBalances(
   expenses: Expense[],
   members: Member[]
 ): MemberBalance[] {
-  const balanceMap = new Map<string, number>();
+  const signedMap = new Map<string, number>();
+  const pendingMap = new Map<string, number>();
 
   // Initialize all members with 0 balance
-  members.forEach((m) => balanceMap.set(m.id, 0));
+  members.forEach((m) => {
+    signedMap.set(m.id, 0);
+    pendingMap.set(m.id, 0);
+  });
 
   expenses.forEach((expense) => {
     expense.splits.forEach((split) => {
-      // Only count signed splits
-      if (!split.signedOff) return;
-
-      const currentBalance = balanceMap.get(split.memberId) || 0;
+      const map = split.signedOff ? signedMap : pendingMap;
+      const currentBalance = map.get(split.memberId) || 0;
 
       if (split.memberId === expense.paidBy) {
         // Payer: gets credit for what they paid minus what they owe
-        balanceMap.set(
+        map.set(
           split.memberId,
           currentBalance + expense.amount - split.amount
         );
       } else {
         // Participant: owes their split amount
-        balanceMap.set(split.memberId, currentBalance - split.amount);
+        map.set(split.memberId, currentBalance - split.amount);
       }
     });
 
     // Handle case where payer is not in the splits
     const payerInSplits = expense.splits.some(
-      (s) => s.memberId === expense.paidBy && s.signedOff
+      (s) => s.memberId === expense.paidBy
     );
     if (!payerInSplits) {
-      // Count signed amounts that the payer covered
+      // Split by signed status
       const signedAmount = expense.splits
         .filter((s) => s.signedOff)
         .reduce((sum, s) => sum + s.amount, 0);
-      const currentBalance = balanceMap.get(expense.paidBy) || 0;
-      balanceMap.set(expense.paidBy, currentBalance + signedAmount);
+      const pendingAmount = expense.splits
+        .filter((s) => !s.signedOff)
+        .reduce((sum, s) => sum + s.amount, 0);
+
+      if (signedAmount > 0) {
+        const currentSigned = signedMap.get(expense.paidBy) || 0;
+        signedMap.set(expense.paidBy, currentSigned + signedAmount);
+      }
+      if (pendingAmount > 0) {
+        const currentPending = pendingMap.get(expense.paidBy) || 0;
+        pendingMap.set(expense.paidBy, currentPending + pendingAmount);
+      }
     }
   });
 
-  return members.map((m) => ({
-    memberId: m.id,
-    memberName: m.name,
-    balance: balanceMap.get(m.id) || 0,
-  }));
+  return members.map((m) => {
+    const signed = signedMap.get(m.id) || 0;
+    const pending = pendingMap.get(m.id) || 0;
+    return {
+      memberId: m.id,
+      memberName: m.name,
+      signedBalance: signed,
+      pendingBalance: pending,
+      balance: signed + pending,
+    };
+  });
 }
 
 export function calculateSettlements(balances: MemberBalance[]): Settlement[] {
   const settlements: Settlement[] = [];
 
-  // Create mutable copies
+  // Create mutable copies - use signedBalance only
   const debtors = balances
-    .filter((b) => b.balance < -0.01)
-    .map((b) => ({ ...b, balance: Math.abs(b.balance) }))
-    .sort((a, b) => b.balance - a.balance);
+    .filter((b) => b.signedBalance < -0.01)
+    .map((b) => ({ ...b, amount: Math.abs(b.signedBalance) }))
+    .sort((a, b) => b.amount - a.amount);
 
   const creditors = balances
-    .filter((b) => b.balance > 0.01)
-    .map((b) => ({ ...b }))
-    .sort((a, b) => b.balance - a.balance);
+    .filter((b) => b.signedBalance > 0.01)
+    .map((b) => ({ ...b, amount: b.signedBalance }))
+    .sort((a, b) => b.amount - a.amount);
 
   let debtorIdx = 0;
   let creditorIdx = 0;
@@ -70,23 +88,23 @@ export function calculateSettlements(balances: MemberBalance[]): Settlement[] {
     const debtor = debtors[debtorIdx];
     const creditor = creditors[creditorIdx];
 
-    const amount = Math.min(debtor.balance, creditor.balance);
+    const settleAmount = Math.min(debtor.amount, creditor.amount);
 
-    if (amount > 0.01) {
+    if (settleAmount > 0.01) {
       settlements.push({
         from: debtor.memberId,
         fromName: debtor.memberName,
         to: creditor.memberId,
         toName: creditor.memberName,
-        amount: Math.round(amount * 100) / 100,
+        amount: Math.round(settleAmount * 100) / 100,
       });
     }
 
-    debtor.balance -= amount;
-    creditor.balance -= amount;
+    debtor.amount -= settleAmount;
+    creditor.amount -= settleAmount;
 
-    if (debtor.balance < 0.01) debtorIdx++;
-    if (creditor.balance < 0.01) creditorIdx++;
+    if (debtor.amount < 0.01) debtorIdx++;
+    if (creditor.amount < 0.01) creditorIdx++;
   }
 
   return settlements;
