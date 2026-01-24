@@ -38,9 +38,8 @@ export function ExpenseCard({
     ? expense.splits.find((s) => s.memberId === currentUser.id)
     : null;
 
-  // Check if current user can edit (payer or creator)
-  const canEdit = currentUser &&
-    (currentUser.id === expense.paidBy || currentUser.id === expense.createdBy);
+  // Only payer can edit/delete
+  const canEdit = currentUser && currentUser.id === expense.paidBy;
 
   const handleSaveDescription = async () => {
     if (!editDescription.trim()) return;

@@ -55,11 +55,11 @@ export function EditExpense() {
 
   const amountNum = parseFloat(amount) || 0;
 
-  // Check if current user can edit (payer or creator)
+  // Only payer can edit
   const canEdit =
     currentUser &&
     expense &&
-    (currentUser.id === expense.paidBy || currentUser.id === expense.createdBy);
+    currentUser.id === expense.paidBy;
 
   // Track selected member IDs to detect selection changes
   const selectedMemberIds = splits

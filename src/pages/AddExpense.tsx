@@ -172,12 +172,13 @@ export function AddExpense() {
 
     try {
       // Build splits from item assignments
+      // Auto sign-off for payer and creator
       const splits = Array.from(memberTotals.entries()).map(([memberId, amount]) => ({
         memberId,
         value: amount,
         amount: amount,
-        signedOff: memberId === paidBy, // Auto sign-off for payer
-        signedAt: memberId === paidBy ? new Date().toISOString() : undefined,
+        signedOff: memberId === paidBy || memberId === currentUser.id,
+        signedAt: (memberId === paidBy || memberId === currentUser.id) ? new Date().toISOString() : undefined,
       }));
 
       await createExpense({
