@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { ExpenseCard } from '../components/ExpenseCard';
+import { formatCurrency } from '../utils/balances';
 
 export function PendingActions() {
-  const { group, expenses, currentUser } = useApp();
+  const { group, expenses, currentUser, signOffExpense } = useApp();
+  const [signingAll, setSigningAll] = useState(false);
 
   if (!group) return null;
 
@@ -24,6 +27,12 @@ export function PendingActions() {
     e.splits.some((s) => s.memberId === currentUser.id && !s.signedOff)
   );
 
+  // Calculate total pending amount for user
+  const toSignOffAmount = toSignOff.reduce((sum, e) => {
+    const userSplit = e.splits.find((s) => s.memberId === currentUser.id && !s.signedOff);
+    return sum + (userSplit?.amount || 0);
+  }, 0);
+
   // Expenses current user paid, waiting for others to sign
   const awaitingOthers = expenses.filter(
     (e) =>
@@ -34,9 +43,34 @@ export function PendingActions() {
   return (
     <div className="pb-20 space-y-8">
       <section>
-        <h2 className="text-xl font-bold mb-4">
-          To Sign Off ({toSignOff.length})
-        </h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">
+            To Sign Off ({toSignOff.length})
+            {toSignOffAmount > 0 && (
+              <span className="text-red-400 ml-2">
+                {formatCurrency(toSignOffAmount, group.currency)}
+              </span>
+            )}
+          </h2>
+          {toSignOff.length > 0 && (
+            <button
+              onClick={async () => {
+                setSigningAll(true);
+                try {
+                  for (const expense of toSignOff) {
+                    await signOffExpense(expense);
+                  }
+                } finally {
+                  setSigningAll(false);
+                }
+              }}
+              disabled={signingAll}
+              className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50"
+            >
+              {signingAll ? 'Signing...' : 'Sign All'}
+            </button>
+          )}
+        </div>
         {toSignOff.length === 0 ? (
           <div className="bg-green-900/30 border border-green-700 rounded-lg p-4 text-center">
             <p className="text-green-200">You're all caught up!</p>
