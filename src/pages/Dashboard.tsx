@@ -119,7 +119,9 @@ export function Dashboard() {
                     <div>
                       <p className="font-medium">{expense.description}</p>
                       <p className="text-gray-400 text-xs">
-                        by {payer?.name || 'Unknown'}
+                        by {currentUser && payer?.id === currentUser.id ? (
+                          <span className="text-cyan-400">You</span>
+                        ) : (payer?.name || 'Unknown')}
                       </p>
                     </div>
                     <p className="font-medium">

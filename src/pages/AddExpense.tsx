@@ -268,6 +268,7 @@ export function AddExpense() {
           <div className="flex flex-wrap gap-2">
             {group.members.map((member) => {
               const isIncluded = includedMemberIds.has(member.id);
+              const isYou = currentUser && member.id === currentUser.id;
               return (
                 <div
                   key={member.id}
@@ -280,7 +281,7 @@ export function AddExpense() {
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
                 >
-                  {member.name}
+                  {isYou ? <span className="text-cyan-300">You</span> : member.name}
                 </div>
               );
             })}

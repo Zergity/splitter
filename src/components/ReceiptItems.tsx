@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ReceiptItem, Member } from '../types';
+import { useApp } from '../context/AppContext';
 
 interface ReceiptItemsProps {
   items: ReceiptItem[];
@@ -12,6 +13,7 @@ interface ReceiptItemsProps {
 }
 
 export function ReceiptItems({ items, members, currency, totalAmount, onTotalChange, onChange, payerId }: ReceiptItemsProps) {
+  const { currentUser } = useApp();
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
   const [dragOverAddButton, setDragOverAddButton] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -183,7 +185,7 @@ export function ReceiptItems({ items, members, currency, totalAmount, onTotalCha
                   }`}
                   title="Click to remove"
                 >
-                  {assignedMember.name}
+                  {currentUser && assignedMember.id === currentUser.id ? 'You' : assignedMember.name}
                 </button>
               ) : (
                 <div className={`h-7 rounded-full border-2 border-dashed ${

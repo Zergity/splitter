@@ -31,8 +31,10 @@ export function ExpenseCard({
   const creator = members.find((m) => m.id === expense.createdBy);
   const allSigned = expense.splits.every((s) => s.signedOff);
 
-  const getMemberName = (id: string) =>
-    members.find((m) => m.id === id)?.name || 'Unknown';
+  const getMemberName = (id: string) => {
+    if (currentUser && id === currentUser.id) return 'You';
+    return members.find((m) => m.id === id)?.name || 'Unknown';
+  };
 
   const userSplit = currentUser
     ? expense.splits.find((s) => s.memberId === currentUser.id)
@@ -106,9 +108,13 @@ export function ExpenseCard({
             </div>
           )}
           <p className="text-sm text-gray-400">
-            Paid by {payer?.name || 'Unknown'}
+            Paid by {currentUser && payer?.id === currentUser.id ? (
+              <span className="text-cyan-400">You</span>
+            ) : (payer?.name || 'Unknown')}
             {creator && creator.id !== expense.paidBy && (
-              <span className="text-gray-500"> (added by {creator.name})</span>
+              <span className="text-gray-500"> (added by {currentUser && creator.id === currentUser.id ? (
+                <span className="text-cyan-400">You</span>
+              ) : creator.name})</span>
             )}
           </p>
         </div>
@@ -224,9 +230,9 @@ export function ExpenseCard({
                         split.signedOff ? 'bg-green-500' : 'bg-yellow-500'
                       }`}
                     />
-                    {currentUser && split.memberId === currentUser.id
-                      ? `${getMemberName(split.memberId)} (you)`
-                      : getMemberName(split.memberId)}
+                    {currentUser && split.memberId === currentUser.id ? (
+                      <span className="text-cyan-400">You</span>
+                    ) : getMemberName(split.memberId)}
                     {split.signedOff && (
                       <span className="text-xs text-green-400 font-medium">Signed</span>
                     )}

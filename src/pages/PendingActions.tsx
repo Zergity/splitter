@@ -69,11 +69,10 @@ export function PendingActions() {
             {awaitingOthers.map((expense) => {
               const pendingMembers = expense.splits
                 .filter((s) => !s.signedOff && s.memberId !== currentUser.id)
-                .map(
-                  (s) =>
-                    group.members.find((m) => m.id === s.memberId)?.name ||
-                    'Unknown'
-                );
+                .map((s) => {
+                  if (s.memberId === currentUser.id) return 'You';
+                  return group.members.find((m) => m.id === s.memberId)?.name || 'Unknown';
+                });
 
               return (
                 <div key={expense.id}>

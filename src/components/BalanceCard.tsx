@@ -24,10 +24,9 @@ export function BalanceCard({
     >
       <div className="flex justify-between items-center">
         <span className="font-medium">
-          {balance.memberName}
-          {isCurrentUser && (
-            <span className="text-xs text-cyan-400 ml-2">(You)</span>
-          )}
+          {isCurrentUser ? (
+            <span className="text-cyan-400">You</span>
+          ) : balance.memberName}
         </span>
         <span
           className={`font-semibold ${

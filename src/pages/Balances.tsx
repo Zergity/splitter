@@ -55,18 +55,18 @@ export function Balances() {
                 <div className="flex items-center gap-2">
                   <span
                     className={`font-medium ${
-                      settlement.from === currentUser?.id ? 'text-red-400' : ''
+                      settlement.from === currentUser?.id ? 'text-cyan-400' : ''
                     }`}
                   >
-                    {settlement.fromName}
+                    {settlement.from === currentUser?.id ? 'You' : settlement.fromName}
                   </span>
                   <span className="text-gray-500">-&gt;</span>
                   <span
                     className={`font-medium ${
-                      settlement.to === currentUser?.id ? 'text-green-400' : ''
+                      settlement.to === currentUser?.id ? 'text-cyan-400' : ''
                     }`}
                   >
-                    {settlement.toName}
+                    {settlement.to === currentUser?.id ? 'You' : settlement.toName}
                   </span>
                 </div>
                 <span className="font-semibold">

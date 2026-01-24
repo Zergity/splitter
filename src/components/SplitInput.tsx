@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Member, SplitType } from '../types';
 import { formatCurrency, roundNumber } from '../utils/balances';
+import { useApp } from '../context/AppContext';
 
 interface SplitValue {
   memberId: string;
@@ -33,6 +34,7 @@ export function SplitInput({
   amountValue = '',
   showAmounts = false,
 }: SplitInputProps) {
+  const { currentUser } = useApp();
   // Track which input is being edited and its text value
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
@@ -195,6 +197,7 @@ export function SplitInput({
               const split = splits.find((s) => s.memberId === member.id);
               if (!split) return null;
 
+              const isYou = currentUser && member.id === currentUser.id;
               return (
                 <button
                   key={member.id}
@@ -206,7 +209,7 @@ export function SplitInput({
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
                 >
-                  {member.name}
+                  {isYou ? <span className="text-cyan-300">You</span> : member.name}
                 </button>
               );
             })}
@@ -249,6 +252,7 @@ export function SplitInput({
             const isEditing = editingId === member.id;
             const displayValue = isEditing ? editingValue : formatInputValue(split.value);
             const isPayer = member.id === paidBy;
+            const isYou = currentUser && member.id === currentUser.id;
 
             return (
               <div
@@ -258,7 +262,7 @@ export function SplitInput({
                 }`}
               >
                 <span className="flex-1 text-sm font-medium truncate">
-                  {member.name}
+                  {isYou ? <span className="text-cyan-400">You</span> : member.name}
                   {isPayer && <span className="text-cyan-400 ml-1">(payer)</span>}
                 </span>
                 <div className="flex items-center gap-1">
