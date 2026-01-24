@@ -4,7 +4,7 @@ import { useApp } from '../context/AppContext';
 import { ReceiptCapture } from '../components/ReceiptCapture';
 import { ReceiptItems } from '../components/ReceiptItems';
 import { ReceiptItem, ReceiptOCRResult } from '../types';
-import { roundNumber } from '../utils/balances';
+import { roundNumber, getTagColor } from '../utils/balances';
 
 export function AddExpense() {
   const navigate = useNavigate();
@@ -18,6 +18,8 @@ export function AddExpense() {
   const [items, setItems] = useState<ReceiptItem[]>([]);
   const [manualTotal, setManualTotal] = useState<number | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
 
   // Calculate totals from items, or use manual total if set
   const itemsTotal = items.reduce((sum, i) => sum + i.amount, 0);
@@ -204,6 +206,7 @@ export function AddExpense() {
         splitType: 'exact',
         splits,
         items, // Store items for later editing
+        tags: tags.length > 0 ? tags : undefined,
         receiptDate,
       });
 
@@ -245,6 +248,58 @@ export function AddExpense() {
             placeholder="What was this expense for?"
             className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100"
           />
+        </div>
+
+        {/* Tags */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">
+            Tags (optional)
+          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            {tags.map((tag) => {
+              const color = getTagColor(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setTags(tags.filter((t) => t !== tag))}
+                  className={`text-xs px-2 py-1 rounded-full ${color.bg} ${color.text} hover:bg-red-900 hover:text-red-300`}
+                >
+                  {tag} ×
+                </button>
+              );
+            })}
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (tagInput.trim() && !tags.includes(tagInput.trim().toLowerCase())) {
+                      setTags([...tags, tagInput.trim().toLowerCase()]);
+                      setTagInput('');
+                    }
+                  }
+                }}
+                placeholder="add tag"
+                className="w-24 text-sm bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-gray-100"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (tagInput.trim() && !tags.includes(tagInput.trim().toLowerCase())) {
+                    setTags([...tags, tagInput.trim().toLowerCase()]);
+                    setTagInput('');
+                  }
+                }}
+                className="text-sm text-cyan-400 hover:text-cyan-300"
+              >
+                +
+              </button>
+            </div>
+          </div>
         </div>
 
         <div>

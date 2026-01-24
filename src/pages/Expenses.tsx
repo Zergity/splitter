@@ -2,24 +2,42 @@ import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { ExpenseCard } from '../components/ExpenseCard';
-import { getDateKey, formatDateHeader } from '../utils/balances';
+import { getDateKey, formatDateHeader, getTagColor } from '../utils/balances';
 import { Expense, Member } from '../types';
 
 export function Expenses() {
   const { group, expenses, currentUser, deleteExpense } = useApp();
   const [filter, setFilter] = useState<'all' | 'mine'>('all');
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
   if (!group) return null;
 
-  const filteredExpenses =
-    filter === 'all'
-      ? expenses
-      : expenses.filter(
-          (e) =>
-            e.paidBy === currentUser?.id ||
-            e.splits.some((s) => s.memberId === currentUser?.id)
-        );
+  // Get all unique tags from expenses
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    expenses.forEach((e) => e.tags?.forEach((t) => tags.add(t)));
+    return Array.from(tags).sort();
+  }, [expenses]);
+
+  // Apply filters
+  let filteredExpenses = expenses;
+
+  // Filter by mine/all
+  if (filter === 'mine') {
+    filteredExpenses = filteredExpenses.filter(
+      (e) =>
+        e.paidBy === currentUser?.id ||
+        e.splits.some((s) => s.memberId === currentUser?.id)
+    );
+  }
+
+  // Filter by tag
+  if (selectedTag) {
+    filteredExpenses = filteredExpenses.filter((e) =>
+      e.tags?.includes(selectedTag)
+    );
+  }
 
   const sortedExpenses = [...filteredExpenses].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -68,7 +86,7 @@ export function Expenses() {
     if (!group) return;
 
     // CSV header
-    const headers = ['Date', 'Description', 'Amount', 'Currency', 'Paid By', 'Participant', 'Share', 'Status'];
+    const headers = ['Date', 'Description', 'Amount', 'Currency', 'Paid By', 'Participant', 'Share', 'Status', 'Tags'];
 
     // Build CSV rows - one row per split
     const rows: string[][] = [];
@@ -76,6 +94,7 @@ export function Expenses() {
     sortedExpenses.forEach((expense) => {
       const date = new Date(expense.createdAt).toISOString().split('T')[0];
       const payer = getMemberName(expense.paidBy, group.members);
+      const tags = expense.tags?.join(', ') || '';
 
       expense.splits.forEach((split) => {
         const participant = getMemberName(split.memberId, group.members);
@@ -90,6 +109,7 @@ export function Expenses() {
           participant,
           split.amount.toString(),
           status,
+          tags,
         ]);
       });
     });
@@ -163,6 +183,38 @@ export function Expenses() {
           >
             My expenses
           </button>
+        </div>
+      )}
+
+      {/* Tag filter */}
+      {allTags.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          <button
+            onClick={() => setSelectedTag(null)}
+            className={`px-3 py-1 rounded-full text-xs font-medium ${
+              selectedTag === null
+                ? 'bg-purple-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            All tags
+          </button>
+          {allTags.map((tag) => {
+            const color = getTagColor(tag);
+            return (
+              <button
+                key={tag}
+                onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  selectedTag === tag
+                    ? 'bg-cyan-600 text-white'
+                    : `${color.bg} ${color.text} ${color.hoverBg}`
+                }`}
+              >
+                {tag}
+              </button>
+            );
+          })}
         </div>
       )}
 

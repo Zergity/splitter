@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Expense, Member } from '../types';
-import { formatCurrency, formatRelativeTime } from '../utils/balances';
+import { formatCurrency, formatRelativeTime, getTagColor } from '../utils/balances';
 import { SignOffButton } from './SignOffButton';
 import { useApp } from '../context/AppContext';
 
@@ -20,9 +20,12 @@ export function ExpenseCard({
   showSignOff = false,
   onDelete,
 }: ExpenseCardProps) {
-  const { currentUser } = useApp();
+  const { currentUser, updateExpense } = useApp();
   const [expanded, setExpanded] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [editingTags, setEditingTags] = useState(false);
+  const [tagInput, setTagInput] = useState('');
+  const [savingTags, setSavingTags] = useState(false);
 
   const payer = members.find((m) => m.id === expense.paidBy);
   const creator = members.find((m) => m.id === expense.createdBy);
@@ -68,6 +71,83 @@ export function ExpenseCard({
               ) : creator.name})</span>
             )}
           </p>
+          {/* Tags */}
+          <div className="flex flex-wrap items-center gap-1 mt-1">
+            {expense.tags?.map((tag) => {
+              const color = getTagColor(tag);
+              return (
+                <button
+                  key={tag}
+                  onClick={async () => {
+                    const newTags = expense.tags?.filter((t) => t !== tag) || [];
+                    await updateExpense(expense.id, { tags: newTags });
+                  }}
+                  className={`text-xs px-2 py-0.5 rounded-full ${color.bg} ${color.text} hover:bg-red-900 hover:text-red-300`}
+                  title="Click to remove"
+                >
+                  {tag} ×
+                </button>
+              );
+            })}
+            {currentUser && !editingTags && (
+              <button
+                onClick={() => setEditingTags(true)}
+                className="text-xs text-gray-500 hover:text-gray-300"
+              >
+                + tag
+              </button>
+            )}
+            {editingTags && (
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={async (e) => {
+                    if (e.key === 'Enter' && tagInput.trim()) {
+                      setSavingTags(true);
+                      const newTags = [...(expense.tags || []), tagInput.trim().toLowerCase()];
+                      await updateExpense(expense.id, { tags: [...new Set(newTags)] });
+                      setTagInput('');
+                      setSavingTags(false);
+                    } else if (e.key === 'Escape') {
+                      setEditingTags(false);
+                      setTagInput('');
+                    }
+                  }}
+                  placeholder="add tag"
+                  className="w-20 text-xs bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-gray-100"
+                  autoFocus
+                  disabled={savingTags}
+                />
+                <button
+                  onClick={async () => {
+                    if (tagInput.trim()) {
+                      setSavingTags(true);
+                      const newTags = [...(expense.tags || []), tagInput.trim().toLowerCase()];
+                      await updateExpense(expense.id, { tags: [...new Set(newTags)] });
+                      setTagInput('');
+                      setSavingTags(false);
+                    }
+                    setEditingTags(false);
+                  }}
+                  className="text-xs text-green-400"
+                  disabled={savingTags}
+                >
+                  {savingTags ? '...' : 'OK'}
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingTags(false);
+                    setTagInput('');
+                  }}
+                  className="text-xs text-gray-500"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         <div className="text-right">
           <p className="font-semibold text-lg">

@@ -189,3 +189,26 @@ export function formatDateHeader(dateKey: string): string {
     });
   }
 }
+
+// Generate consistent color classes for tags based on name
+const TAG_COLORS = [
+  { bg: 'bg-purple-900', text: 'text-purple-300', hoverBg: 'hover:bg-purple-800' },
+  { bg: 'bg-blue-900', text: 'text-blue-300', hoverBg: 'hover:bg-blue-800' },
+  { bg: 'bg-green-900', text: 'text-green-300', hoverBg: 'hover:bg-green-800' },
+  { bg: 'bg-pink-900', text: 'text-pink-300', hoverBg: 'hover:bg-pink-800' },
+  { bg: 'bg-indigo-900', text: 'text-indigo-300', hoverBg: 'hover:bg-indigo-800' },
+  { bg: 'bg-teal-900', text: 'text-teal-300', hoverBg: 'hover:bg-teal-800' },
+  { bg: 'bg-amber-900', text: 'text-amber-300', hoverBg: 'hover:bg-amber-800' },
+  { bg: 'bg-rose-900', text: 'text-rose-300', hoverBg: 'hover:bg-rose-800' },
+];
+
+export function getTagColor(tag: string): { bg: string; text: string; hoverBg: string } {
+  // Simple hash based on tag characters
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) {
+    hash = ((hash << 5) - hash) + tag.charCodeAt(i);
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  const index = Math.abs(hash) % TAG_COLORS.length;
+  return TAG_COLORS[index];
+}

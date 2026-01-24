@@ -36,6 +36,7 @@ export interface Expense {
   splitType: SplitType;
   splits: ExpenseSplit[];
   items?: ReceiptItem[]; // stored items for editing later
+  tags?: string[]; // user-defined tags
   createdAt: string;
   receiptUrl?: string;   // URL to receipt image in R2
   receiptDate?: string;  // Date extracted from receipt
