@@ -46,6 +46,22 @@ export function Dashboard() {
       }, 0)
     : 0;
 
+  // Incomplete expenses - current user is payer and has unassigned items
+  const incomplete = currentUser
+    ? expenses.filter(
+        (e) =>
+          e.paidBy === currentUser.id &&
+          e.items?.some((item) => !item.memberId)
+      )
+    : [];
+
+  const incompleteAmount = incomplete.reduce((sum, e) => {
+    const unassignedSum = e.items
+      ?.filter((item) => !item.memberId)
+      .reduce((s, item) => s + item.amount, 0) || 0;
+    return sum + unassignedSum;
+  }, 0);
+
   return (
     <div className="space-y-6 pb-20">
       <div className="text-center py-6">
@@ -82,6 +98,23 @@ export function Dashboard() {
               )}
             </p>
           </div>
+
+          {incomplete.length > 0 && (
+            <Link
+              to="/pending"
+              className="block w-full bg-gray-800 rounded-lg shadow-sm border border-orange-700 p-4 text-center hover:border-orange-500"
+            >
+              <p className="text-2xl font-bold text-orange-400">
+                {incomplete.length}
+              </p>
+              <p className="text-sm text-gray-400">Incomplete</p>
+              {incompleteAmount > 0 && (
+                <p className="text-xs text-orange-400 mt-1">
+                  {formatCurrency(incompleteAmount, group.currency)} unassigned
+                </p>
+              )}
+            </Link>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <Link

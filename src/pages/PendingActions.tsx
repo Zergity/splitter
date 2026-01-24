@@ -40,8 +40,54 @@ export function PendingActions() {
       e.splits.some((s) => !s.signedOff && s.memberId !== currentUser.id)
   );
 
+  // Incomplete expenses - current user is payer and has unassigned items
+  const incomplete = expenses.filter(
+    (e) =>
+      e.paidBy === currentUser.id &&
+      e.items?.some((item) => !item.memberId)
+  );
+
+  // Calculate total unassigned amount
+  const incompleteAmount = incomplete.reduce((sum, e) => {
+    const unassignedSum = e.items
+      ?.filter((item) => !item.memberId)
+      .reduce((s, item) => s + item.amount, 0) || 0;
+    return sum + unassignedSum;
+  }, 0);
+
   return (
     <div className="pb-20 space-y-8">
+      {/* Incomplete section - only show if there are incomplete expenses */}
+      {incomplete.length > 0 && (
+        <section>
+          <h2 className="text-xl font-bold mb-4">
+            Incomplete ({incomplete.length})
+            {incompleteAmount > 0 && (
+              <span className="text-orange-400 ml-2">
+                {formatCurrency(incompleteAmount, group.currency)}
+              </span>
+            )}
+          </h2>
+          <div className="space-y-4">
+            {incomplete.map((expense) => {
+              const unassignedCount = expense.items?.filter((item) => !item.memberId).length || 0;
+              return (
+                <div key={expense.id}>
+                  <ExpenseCard
+                    expense={expense}
+                    members={group.members}
+                    currency={group.currency}
+                  />
+                  <p className="text-sm text-orange-400 mt-2 px-4">
+                    {unassignedCount} unassigned item{unassignedCount !== 1 ? 's' : ''} - tap Edit amounts to assign
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <section>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">

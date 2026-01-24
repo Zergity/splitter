@@ -10,9 +10,11 @@ interface ReceiptItemsProps {
   onTotalChange: (total: string) => void;
   onChange: (items: ReceiptItem[]) => void;
   payerId?: string;
+  selectedItemId?: string | null;
+  onItemSelect?: (itemId: string) => void;
 }
 
-export function ReceiptItems({ items, members, currency, totalAmount, onTotalChange, onChange, payerId }: ReceiptItemsProps) {
+export function ReceiptItems({ items, members, currency, totalAmount, onTotalChange, onChange, payerId, selectedItemId, onItemSelect }: ReceiptItemsProps) {
   const { currentUser } = useApp();
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
   const [dragOverAddButton, setDragOverAddButton] = useState(false);
@@ -161,6 +163,7 @@ export function ReceiptItems({ items, members, currency, totalAmount, onTotalCha
         const isOver = dragOverItemId === item.id;
         const assignedMember = item.memberId ? members.find(m => m.id === item.memberId) : null;
         const isEditing = editingId === item.id;
+        const isSelected = selectedItemId === item.id;
 
         return (
           <div
@@ -169,12 +172,14 @@ export function ReceiptItems({ items, members, currency, totalAmount, onTotalCha
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, item.id)}
             className={`flex items-center gap-2 p-2 rounded-lg transition-all ${
-              isOver
+              isSelected
+                ? 'bg-yellow-900/50 border-2 border-yellow-500'
+                : isOver
                 ? 'bg-cyan-900/50 border-2 border-cyan-500 border-dashed'
                 : 'bg-gray-800'
             }`}
           >
-            {/* Assigned member or empty drop zone */}
+            {/* Assigned member or empty drop zone (clickable to select) */}
             <div className="w-20 flex-shrink-0">
               {assignedMember ? (
                 <button
@@ -188,9 +193,18 @@ export function ReceiptItems({ items, members, currency, totalAmount, onTotalCha
                   {currentUser && assignedMember.id === currentUser.id ? 'You' : assignedMember.name}
                 </button>
               ) : (
-                <div className={`h-7 rounded-full border-2 border-dashed ${
-                  isOver ? 'border-cyan-500' : 'border-gray-600'
-                }`} />
+                <button
+                  type="button"
+                  onClick={() => onItemSelect?.(item.id)}
+                  className={`w-full h-7 rounded-full border-2 border-dashed transition-colors ${
+                    isSelected
+                      ? 'border-yellow-500 bg-yellow-900/30'
+                      : isOver
+                      ? 'border-cyan-500'
+                      : 'border-gray-600 hover:border-gray-400'
+                  }`}
+                  title="Click to select, then tap a member"
+                />
               )}
             </div>
 

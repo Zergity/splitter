@@ -35,6 +35,7 @@ export interface Expense {
   createdBy: string; // member id who created the expense
   splitType: SplitType;
   splits: ExpenseSplit[];
+  items?: ReceiptItem[]; // stored items for editing later
   createdAt: string;
   receiptUrl?: string;   // URL to receipt image in R2
   receiptDate?: string;  // Date extracted from receipt

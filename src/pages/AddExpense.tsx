@@ -17,6 +17,7 @@ export function AddExpense() {
   const [receiptDate, setReceiptDate] = useState<string | undefined>(undefined);
   const [items, setItems] = useState<ReceiptItem[]>([]);
   const [manualTotal, setManualTotal] = useState<number | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   // Calculate totals from items, or use manual total if set
   const itemsTotal = items.reduce((sum, i) => sum + i.amount, 0);
@@ -100,8 +101,17 @@ export function AddExpense() {
     setManualTotal(null); // Reset so total = sum of items
   };
 
-  // Handle member tap - add to unassigned item or create new, or remove if included
+  // Handle member tap - assign to selected item, or toggle inclusion
   const handleMemberTap = (memberId: string) => {
+    // If an item is selected, assign this member to it
+    if (selectedItemId) {
+      handleItemsChange(items.map(item =>
+        item.id === selectedItemId ? { ...item, memberId } : item
+      ));
+      setSelectedItemId(null);
+      return;
+    }
+
     const isIncluded = includedMemberIds.has(memberId);
 
     if (isIncluded) {
@@ -128,6 +138,11 @@ export function AddExpense() {
         handleItemsChange([...items, newItem]);
       }
     }
+  };
+
+  // Handle item selection for assignment
+  const handleItemSelect = (itemId: string) => {
+    setSelectedItemId(selectedItemId === itemId ? null : itemId);
   };
 
   // Drag handlers for members
@@ -162,9 +177,8 @@ export function AddExpense() {
       return;
     }
 
-    const memberTotals = calculateSplits();
-    if (memberTotals.size === 0) {
-      setError('Assign at least one item to a member');
+    if (items.length === 0) {
+      setError('Add at least one item');
       return;
     }
 
@@ -173,6 +187,7 @@ export function AddExpense() {
     try {
       // Build splits from item assignments
       // Auto sign-off for payer and creator
+      const memberTotals = calculateSplits();
       const splits = Array.from(memberTotals.entries()).map(([memberId, amount]) => ({
         memberId,
         value: amount,
@@ -188,6 +203,7 @@ export function AddExpense() {
         createdBy: currentUser.id,
         splitType: 'exact',
         splits,
+        items, // Store items for later editing
         receiptDate,
       });
 
@@ -327,6 +343,8 @@ export function AddExpense() {
             onTotalChange={handleTotalChange}
             onChange={handleItemsChange}
             payerId={paidBy}
+            selectedItemId={selectedItemId}
+            onItemSelect={handleItemSelect}
           />
         </div>
 
@@ -338,7 +356,7 @@ export function AddExpense() {
 
         <button
           type="submit"
-          disabled={submitting || includedMemberIds.size === 0}
+          disabled={submitting || items.length === 0}
           className="w-full bg-cyan-600 text-white py-3 rounded-lg font-medium hover:bg-cyan-700 disabled:opacity-50"
         >
           {submitting ? 'Adding...' : 'Add Expense'}

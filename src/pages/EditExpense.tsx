@@ -1,16 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { SplitInput } from '../components/SplitInput';
-import { SplitType } from '../types';
-import { calculateSplits, validateSplits } from '../utils/splits';
+import { ReceiptItems } from '../components/ReceiptItems';
+import { ReceiptItem } from '../types';
 import { roundNumber } from '../utils/balances';
-
-interface SplitValue {
-  memberId: string;
-  value: number;
-  selected: boolean;
-}
 
 export function EditExpense() {
   const navigate = useNavigate();
@@ -20,10 +13,10 @@ export function EditExpense() {
   const expense = expenses.find((e) => e.id === id);
 
   const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
   const [paidBy, setPaidBy] = useState('');
-  const [splitType, setSplitType] = useState<SplitType>('exact');
-  const [splits, setSplits] = useState<SplitValue[]>([]);
+  const [items, setItems] = useState<ReceiptItem[]>([]);
+  const [manualTotal, setManualTotal] = useState<number | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,29 +24,30 @@ export function EditExpense() {
   useEffect(() => {
     if (expense && group) {
       setDescription(expense.description);
-      setAmount(expense.amount.toString());
       setPaidBy(expense.paidBy);
-      setSplitType(expense.splitType);
 
-      // Build splits from expense and group members
-      const expenseSplits = new Map(
-        expense.splits.map((s) => [s.memberId, s])
-      );
-
-      setSplits(
-        group.members.map((m) => {
-          const existingSplit = expenseSplits.get(m.id);
-          return {
-            memberId: m.id,
-            value: existingSplit?.value || 0,
-            selected: !!existingSplit,
-          };
-        })
-      );
+      // Use stored items if available, otherwise convert splits to items
+      if (expense.items && expense.items.length > 0) {
+        setItems(expense.items);
+      } else {
+        // Convert splits to items for backward compatibility
+        const convertedItems: ReceiptItem[] = expense.splits.map((split) => ({
+          id: crypto.randomUUID(),
+          description: '',
+          amount: split.amount,
+          memberId: split.memberId,
+        }));
+        setItems(convertedItems);
+      }
     }
   }, [expense, group]);
 
-  const amountNum = parseFloat(amount) || 0;
+  // Calculate totals from items
+  const itemsTotal = items.reduce((sum, i) => sum + i.amount, 0);
+  const totalAmount = manualTotal !== null ? manualTotal : itemsTotal;
+
+  // Calculate which members are included
+  const includedMemberIds = new Set(items.filter(i => i.memberId).map(i => i.memberId!));
 
   // Only payer can edit
   const canEdit =
@@ -61,37 +55,94 @@ export function EditExpense() {
     expense &&
     currentUser.id === expense.paidBy;
 
-  // Track selected member IDs to detect selection changes
-  const selectedMemberIds = splits
-    .filter((s) => s.selected)
-    .map((s) => s.memberId)
-    .join(',');
+  // Calculate splits from items
+  const calculateSplits = () => {
+    const memberTotals = new Map<string, number>();
+    for (const item of items) {
+      if (item.memberId && item.amount > 0) {
+        const current = memberTotals.get(item.memberId) || 0;
+        memberTotals.set(item.memberId, roundNumber(current + item.amount, 2));
+      }
+    }
 
-  // Auto-fill payer's value when amount, selection, or payer changes
-  useEffect(() => {
-    if (splitType === 'shares') return;
+    // Payer takes the difference between total and assigned items sum
+    if (paidBy && totalAmount > 0) {
+      const currentItemsSum = Array.from(memberTotals.values()).reduce((sum, v) => sum + v, 0);
+      const diff = roundNumber(totalAmount - currentItemsSum, 2);
+      if (Math.abs(diff) > 0.001) {
+        const payerCurrent = memberTotals.get(paidBy) || 0;
+        memberTotals.set(paidBy, roundNumber(payerCurrent + diff, 2));
+      }
+    }
 
-    const selected = splits.filter((s) => s.selected);
-    if (selected.length === 0) return;
+    return memberTotals;
+  };
 
-    // Find remainder recipient: payer if selected, otherwise first selected
-    const payerSelected = selected.find((s) => s.memberId === paidBy);
-    const recipientId = payerSelected ? paidBy : selected[0].memberId;
+  const handleTotalChange = (value: string) => {
+    const parsed = parseFloat(value);
+    if (!isNaN(parsed) && parsed >= 0) {
+      const currentSum = items.reduce((sum, i) => sum + i.amount, 0);
+      const diff = roundNumber(parsed - currentSum, 2);
 
-    // Calculate sum of others
-    const othersSum = selected
-      .filter((s) => s.memberId !== recipientId)
-      .reduce((sum, s) => sum + s.value, 0);
+      if (Math.abs(diff) > 0.001 && items.length > 0) {
+        const payerItem = items.find(i => i.memberId === paidBy);
+        const targetItem = payerItem || items[0];
+        const newAmount = roundNumber(targetItem.amount + diff, 2);
+        setItems(items.map(item =>
+          item.id === targetItem.id ? { ...item, amount: Math.max(0, newAmount) } : item
+        ));
+      }
+      setManualTotal(null);
+    } else if (value === '' || value === '0') {
+      setManualTotal(null);
+    }
+  };
 
-    const targetTotal = splitType === 'exact' ? amountNum : 100;
-    const remainder = Math.max(0, roundNumber(targetTotal - othersSum, 1));
+  const handleItemsChange = (newItems: ReceiptItem[]) => {
+    setItems(newItems);
+    setManualTotal(null);
+  };
 
-    setSplits((prev) =>
-      prev.map((s) =>
-        s.memberId === recipientId ? { ...s, value: remainder } : s
-      )
-    );
-  }, [amountNum, paidBy, splitType, selectedMemberIds]);
+  const handleMemberTap = (memberId: string) => {
+    if (selectedItemId) {
+      handleItemsChange(items.map(item =>
+        item.id === selectedItemId ? { ...item, memberId } : item
+      ));
+      setSelectedItemId(null);
+      return;
+    }
+
+    const isIncluded = includedMemberIds.has(memberId);
+    if (isIncluded) {
+      handleItemsChange(items.map(item =>
+        item.memberId === memberId ? { ...item, memberId: undefined } : item
+      ));
+    } else {
+      const unassignedItem = items.find(item => !item.memberId);
+      if (unassignedItem) {
+        handleItemsChange(items.map(item =>
+          item.id === unassignedItem.id ? { ...item, memberId } : item
+        ));
+      } else {
+        const newItem: ReceiptItem = {
+          id: crypto.randomUUID(),
+          description: '',
+          amount: 0,
+          memberId,
+        };
+        handleItemsChange([...items, newItem]);
+      }
+    }
+  };
+
+  const handleItemSelect = (itemId: string) => {
+    setSelectedItemId(selectedItemId === itemId ? null : itemId);
+  };
+
+  const handleMemberDragStart = (e: React.DragEvent, memberId: string) => {
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.setData('text/plain', memberId);
+  };
 
   if (!group || !expense) {
     return (
@@ -109,98 +160,6 @@ export function EditExpense() {
     );
   }
 
-  const selectedSplits = splits.filter((s) => s.selected);
-
-  // Calculate final amount for a split based on current type
-  const getCalculatedAmount = (split: SplitValue, type: SplitType): number => {
-    if (!split.selected) return 0;
-    const selected = splits.filter((s) => s.selected);
-
-    switch (type) {
-      case 'exact':
-        return split.value;
-      case 'percentage':
-        return (amountNum * split.value) / 100;
-      case 'shares': {
-        const totalShares = selected.reduce((sum, s) => sum + s.value, 0);
-        return totalShares > 0 ? (amountNum * split.value) / totalShares : 0;
-      }
-      default:
-        return split.value;
-    }
-  };
-
-  // Convert splits when changing split type to preserve final amounts
-  const handleSplitTypeChange = (newType: SplitType) => {
-    if (newType === splitType) return;
-
-    const selected = splits.filter((s) => s.selected);
-    if (selected.length === 0 || amountNum <= 0) {
-      setSplitType(newType);
-      return;
-    }
-
-    // Calculate current final amounts
-    const amounts = splits.map((s) => ({
-      memberId: s.memberId,
-      amount: getCalculatedAmount(s, splitType),
-      selected: s.selected,
-    }));
-
-    // Convert to new type values
-    const totalShares = selected.length;
-    const newSplits = splits.map((s) => {
-      const currentAmount = amounts.find((a) => a.memberId === s.memberId)?.amount || 0;
-
-      let newValue: number;
-      switch (newType) {
-        case 'exact':
-          newValue = roundNumber(currentAmount, 1);
-          break;
-        case 'percentage':
-          newValue = amountNum > 0 ? roundNumber((currentAmount / amountNum) * 100, 1) : 0;
-          break;
-        case 'shares':
-          newValue = amountNum > 0 ? roundNumber((currentAmount / amountNum) * totalShares, 1) : 0;
-          break;
-        default:
-          newValue = roundNumber(currentAmount, 1);
-      }
-
-      return { ...s, value: s.selected ? newValue : s.value };
-    });
-
-    setSplits(newSplits);
-    setSplitType(newType);
-  };
-
-  const handleSplitEqually = () => {
-    const selectedCount = splits.filter((s) => s.selected).length;
-    if (selectedCount === 0) return;
-
-    let equalValue: number;
-    switch (splitType) {
-      case 'exact':
-        equalValue = amountNum > 0 ? roundNumber(amountNum / selectedCount, 1) : 0;
-        break;
-      case 'percentage':
-        equalValue = roundNumber(100 / selectedCount, 1);
-        break;
-      case 'shares':
-        equalValue = 1;
-        break;
-      default:
-        equalValue = 1;
-    }
-
-    setSplits(
-      splits.map((s) => ({
-        ...s,
-        value: s.selected ? equalValue : s.value,
-      }))
-    );
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -210,8 +169,8 @@ export function EditExpense() {
       return;
     }
 
-    if (amountNum <= 0) {
-      setError('Amount must be greater than 0');
+    if (totalAmount <= 0) {
+      setError('Total amount must be greater than 0');
       return;
     }
 
@@ -220,77 +179,64 @@ export function EditExpense() {
       return;
     }
 
-    if (selectedSplits.length === 0) {
-      setError('Select at least one participant');
-      return;
-    }
-
-    const validation = validateSplits(
-      amountNum,
-      splitType,
-      selectedSplits.map((s) => ({ memberId: s.memberId, value: s.value }))
-    );
-
-    if (!validation.valid) {
-      setError(validation.error || 'Invalid split');
+    if (items.length === 0) {
+      setError('Add at least one item');
       return;
     }
 
     setSubmitting(true);
 
     try {
-      // Calculate new splits
-      const newCalculatedSplits = calculateSplits(
-        amountNum,
-        splitType,
-        selectedSplits.map((s) => ({ memberId: s.memberId, value: s.value })),
-        paidBy
-      );
-
-      // Determine which members need to re-sign-off
-      // Reset signedOff for members whose amount changed
+      const memberTotals = calculateSplits();
       const oldSplitsMap = new Map(
         expense.splits.map((s) => [s.memberId, s])
       );
 
-      const finalSplits = newCalculatedSplits.map((newSplit) => {
-        const oldSplit = oldSplitsMap.get(newSplit.memberId);
+      // Build splits with sign-off logic
+      const splits = Array.from(memberTotals.entries()).map(([memberId, amount]) => {
+        const oldSplit = oldSplitsMap.get(memberId);
 
-        // If member is the payer, auto-sign
-        if (newSplit.memberId === paidBy) {
+        // Payer always auto-signs
+        if (memberId === paidBy) {
           return {
-            ...newSplit,
+            memberId,
+            value: amount,
+            amount,
             signedOff: true,
             signedAt: new Date().toISOString(),
           };
         }
 
-        // If this is a new participant or amount changed significantly, require re-sign-off
-        if (!oldSplit || Math.abs(oldSplit.amount - newSplit.amount) > 0.01) {
+        // New participant or amount changed - require sign-off
+        if (!oldSplit || Math.abs(oldSplit.amount - amount) > 0.01) {
           return {
-            ...newSplit,
+            memberId,
+            value: amount,
+            amount,
             signedOff: false,
             signedAt: undefined,
-            // Store the previous amount so we can show the change
             previousAmount: oldSplit?.amount,
           };
         }
 
-        // Keep existing sign-off status if amount didn't change
+        // Keep existing sign-off status
         return {
-          ...newSplit,
+          memberId,
+          value: amount,
+          amount,
           signedOff: oldSplit.signedOff,
           signedAt: oldSplit.signedAt,
-          previousAmount: oldSplit.previousAmount, // preserve if already set
+          previousAmount: oldSplit.previousAmount,
         };
       });
 
       await updateExpense(expense.id, {
         description: description.trim(),
-        amount: amountNum,
+        amount: totalAmount,
         paidBy,
-        splitType,
-        splits: finalSplits,
+        splitType: 'exact',
+        splits,
+        items,
       });
 
       navigate('/expenses');
@@ -341,69 +287,74 @@ export function EditExpense() {
           </select>
         </div>
 
+        {/* Split between - draggable members */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
             Split between
           </label>
-          <SplitInput
-            members={group.members}
-            splitType={splitType}
-            splits={splits}
-            totalAmount={amountNum}
-            currency={group.currency}
-            paidBy={paidBy}
-            onChange={setSplits}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Split type
-          </label>
-          <div className="flex gap-2">
-            {(['exact', 'percentage', 'shares'] as SplitType[]).map(
-              (type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => handleSplitTypeChange(type)}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium capitalize ${
-                    splitType === type
-                      ? 'bg-cyan-600 text-white'
+          <div className="flex flex-wrap gap-2">
+            {group.members.map((member) => {
+              const isIncluded = includedMemberIds.has(member.id);
+              const isYou = currentUser && member.id === currentUser.id;
+              return (
+                <div
+                  key={member.id}
+                  draggable
+                  onClick={() => handleMemberTap(member.id)}
+                  onDragStart={(e) => handleMemberDragStart(e, member.id)}
+                  className={`px-3 py-1.5 rounded-full text-sm cursor-grab active:cursor-grabbing select-none transition-colors ${
+                    isIncluded
+                      ? 'bg-cyan-600 text-white hover:bg-red-500'
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
                 >
-                  {type === 'percentage' ? '%' : type}
-                </button>
-              )
-            )}
+                  {isYou ? <span className="text-cyan-300">You</span> : member.name}
+                </div>
+              );
+            })}
           </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Tap item then tap member, or drag member to item
+          </p>
         </div>
 
+        {/* Amounts section */}
         <div>
           <div className="flex justify-between items-center mb-2">
             <label className="block text-sm font-medium text-gray-300">
               Amounts
             </label>
-            <button
-              type="button"
-              onClick={handleSplitEqually}
-              className="text-sm text-cyan-400 hover:text-cyan-300 underline"
-            >
-              Split equally
-            </button>
+            {includedMemberIds.size > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  const selectedMembers = Array.from(includedMemberIds);
+                  if (selectedMembers.length === 0) return;
+                  const splitAmount = roundNumber(totalAmount / selectedMembers.length, 2);
+                  const newItems: ReceiptItem[] = selectedMembers.map(memberId => ({
+                    id: crypto.randomUUID(),
+                    description: '',
+                    amount: splitAmount,
+                    memberId,
+                  }));
+                  handleItemsChange(newItems);
+                }}
+                className="text-sm text-cyan-400 hover:text-cyan-300"
+              >
+                Split equally
+              </button>
+            )}
           </div>
-          <SplitInput
+          <ReceiptItems
+            items={items}
             members={group.members}
-            splitType={splitType}
-            splits={splits}
-            totalAmount={amountNum}
             currency={group.currency}
-            paidBy={paidBy}
-            onChange={setSplits}
-            showAmounts
-            amountValue={amount}
-            onAmountChange={setAmount}
+            totalAmount={totalAmount}
+            onTotalChange={handleTotalChange}
+            onChange={handleItemsChange}
+            payerId={paidBy}
+            selectedItemId={selectedItemId}
+            onItemSelect={handleItemSelect}
           />
         </div>
 
@@ -423,7 +374,7 @@ export function EditExpense() {
           </button>
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || items.length === 0}
             className="flex-1 bg-cyan-600 text-white py-3 rounded-lg font-medium hover:bg-cyan-700 disabled:opacity-50"
           >
             {submitting ? 'Saving...' : 'Save Changes'}

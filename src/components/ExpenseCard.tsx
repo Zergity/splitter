@@ -20,16 +20,16 @@ export function ExpenseCard({
   showSignOff = false,
   onDelete,
 }: ExpenseCardProps) {
-  const { currentUser, updateExpense } = useApp();
-  const [isEditing, setIsEditing] = useState(false);
-  const [editDescription, setEditDescription] = useState(expense.description);
-  const [saving, setSaving] = useState(false);
+  const { currentUser } = useApp();
   const [expanded, setExpanded] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
 
   const payer = members.find((m) => m.id === expense.paidBy);
   const creator = members.find((m) => m.id === expense.createdBy);
   const allSigned = expense.splits.every((s) => s.signedOff);
+
+  // Check if expense has unassigned items (incomplete)
+  const hasUnassignedItems = expense.items?.some((item) => !item.memberId) ?? false;
 
   const getMemberName = (id: string) => {
     if (currentUser && id === currentUser.id) return 'You';
@@ -43,70 +43,21 @@ export function ExpenseCard({
   // Only payer can edit/delete
   const canEdit = currentUser && currentUser.id === expense.paidBy;
 
-  const handleSaveDescription = async () => {
-    if (!editDescription.trim()) return;
-    setSaving(true);
-    try {
-      await updateExpense(expense.id, { description: editDescription.trim() });
-      setIsEditing(false);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setEditDescription(expense.description);
-    setIsEditing(false);
-  };
-
   return (
     <div className="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-4">
       <div className="flex justify-between items-start mb-2">
         <div className="flex-1">
-          {isEditing ? (
-            <div className="flex gap-2 items-center">
-              <input
-                type="text"
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                className="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-gray-100"
-                autoFocus
-              />
-              <button
-                onClick={handleSaveDescription}
-                disabled={saving}
-                className="text-green-400 text-sm font-medium"
+          <div className="flex items-center gap-2">
+            <h3 className="font-medium text-gray-100">{expense.description}</h3>
+            {canEdit && (
+              <Link
+                to={`/edit/${expense.id}`}
+                className="text-cyan-400 text-xs hover:text-cyan-300"
               >
-                Save
-              </button>
-              <button
-                onClick={handleCancelEdit}
-                className="text-gray-400 text-sm"
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <h3 className="font-medium text-gray-100">{expense.description}</h3>
-              {canEdit && (
-                <>
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="text-cyan-400 text-xs hover:text-cyan-300"
-                  >
-                    Edit
-                  </button>
-                  <Link
-                    to={`/edit/${expense.id}`}
-                    className="text-cyan-400 text-xs hover:text-cyan-300"
-                  >
-                    Edit amounts
-                  </Link>
-                </>
-              )}
-            </div>
-          )}
+                Edit
+              </Link>
+            )}
+          </div>
           <p className="text-sm text-gray-400">
             Paid by {currentUser && payer?.id === currentUser.id ? (
               <span className="text-cyan-400">You</span>
@@ -145,12 +96,14 @@ export function ExpenseCard({
             )}
             <span
               className={`text-xs px-2 py-0.5 rounded-full ${
-                allSigned
+                hasUnassignedItems
+                  ? 'bg-orange-900 text-orange-300'
+                  : allSigned
                   ? 'bg-green-900 text-green-300'
                   : 'bg-yellow-900 text-yellow-300'
               }`}
             >
-              {allSigned ? 'Signed' : 'Pending'}
+              {hasUnassignedItems ? 'Incomplete' : allSigned ? 'Signed' : 'Pending'}
             </span>
           </div>
         </div>
