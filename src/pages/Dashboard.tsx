@@ -124,7 +124,7 @@ export function Dashboard() {
               <p className="text-2xl font-bold text-cyan-400">
                 {pendingForUser.length}
               </p>
-              <p className="text-sm text-gray-400">To sign off</p>
+              <p className="text-sm text-gray-400">To accept</p>
               {toSignOffAmount > 0 && (
                 <p className="text-xs text-red-400 mt-1">
                   {formatCurrency(toSignOffAmount, group.currency)}

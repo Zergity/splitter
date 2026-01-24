@@ -178,7 +178,7 @@ export function AddSettlement() {
             </p>
             {currentUser && toMember.id !== currentUser.id && toMember.id !== fromMemberId && (
               <p className="text-xs text-yellow-400 mt-2">
-                {toMember.name} will need to sign off to confirm receipt
+                {toMember.name} will need to accept to confirm receipt
               </p>
             )}
           </div>

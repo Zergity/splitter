@@ -218,7 +218,7 @@ export function ExpenseCard({
                   : 'bg-yellow-900 text-yellow-300'
               }`}
             >
-              {hasUnassignedItems ? 'Incomplete' : allSigned ? 'Signed' : 'Pending'}
+              {hasUnassignedItems ? 'Incomplete' : allSigned ? 'Accepted' : 'Pending'}
             </span>
           </div>
         </div>
@@ -264,7 +264,7 @@ export function ExpenseCard({
                   />
                   Your share
                   {userSplit.signedOff && (
-                    <span className="text-xs text-green-400 font-medium">Signed</span>
+                    <span className="text-xs text-green-400 font-medium">Accepted</span>
                   )}
                 </span>
                 <span className="text-gray-400">
@@ -326,7 +326,7 @@ export function ExpenseCard({
                         <span className="text-cyan-400">You</span>
                       ) : getMemberName(split.memberId)}
                       {split.signedOff && (
-                        <span className="text-xs text-green-400 font-medium">Signed</span>
+                        <span className="text-xs text-green-400 font-medium">Accepted</span>
                       )}
                     </span>
                     <span className="text-gray-400">

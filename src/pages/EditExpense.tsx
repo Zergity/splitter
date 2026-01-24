@@ -252,7 +252,7 @@ export function EditExpense() {
       <h2 className="text-xl font-bold mb-6">Edit Expense</h2>
 
       <div className="bg-yellow-900/30 border border-yellow-700 text-yellow-200 px-4 py-3 rounded-lg mb-6 text-sm">
-        Changing amounts will require affected members to sign off again.
+        Changing amounts will require affected members to accept again.
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

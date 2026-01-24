@@ -23,7 +23,7 @@ export function SignOffButton({ expense, compact = false }: SignOffButtonProps) 
 
   const buttonText = isSettlement
     ? loading ? 'Confirming...' : 'Confirm'
-    : loading ? 'Signing...' : 'Sign Off';
+    : loading ? 'Accepting...' : 'Accept';
 
   return (
     <button

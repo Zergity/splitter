@@ -102,9 +102,9 @@ export function Balances() {
         <ul className="text-sm text-gray-400 space-y-1">
           <li>Positive balance = you are owed money</li>
           <li>Negative balance = you owe money</li>
-          <li><span className="text-green-500">Signed</span> = confirmed expenses</li>
-          <li><span className="text-yellow-500">Pending</span> = awaiting sign-off</li>
-          <li>Settlement suggestions based on signed balances only</li>
+          <li><span className="text-green-500">Accepted</span> = confirmed expenses</li>
+          <li><span className="text-yellow-500">Pending</span> = awaiting acceptance</li>
+          <li>Settlement suggestions based on accepted balances only</li>
           <li><span className="text-green-400">Settlements</span> = money transfers between members</li>
           <li>Recipients must confirm settlements received</li>
         </ul>

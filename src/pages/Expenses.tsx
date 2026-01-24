@@ -98,7 +98,7 @@ export function Expenses() {
 
       expense.splits.forEach((split) => {
         const participant = getMemberName(split.memberId, group.members);
-        const status = split.signedOff ? 'Signed' : 'Pending';
+        const status = split.signedOff ? 'Accepted' : 'Pending';
 
         rows.push([
           date,

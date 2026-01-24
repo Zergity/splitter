@@ -91,7 +91,7 @@ export function PendingActions() {
       <section>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">
-            To Sign Off ({toSignOff.length})
+            To Accept ({toSignOff.length})
             {toSignOffAmount > 0 && (
               <span className="text-red-400 ml-2">
                 {formatCurrency(toSignOffAmount, group.currency)}
@@ -113,7 +113,7 @@ export function PendingActions() {
               disabled={signingAll}
               className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50"
             >
-              {signingAll ? 'Signing...' : 'Sign All'}
+              {signingAll ? 'Accepting...' : 'Accept All'}
             </button>
           )}
         </div>

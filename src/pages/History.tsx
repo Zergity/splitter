@@ -42,7 +42,7 @@ export function History() {
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-center">
           <p className="text-gray-400">No completed expenses yet</p>
           <p className="text-sm text-gray-500 mt-1">
-            Expenses appear here once all participants have signed off
+            Expenses appear here once all participants have accepted
           </p>
         </div>
       ) : (
