@@ -233,16 +233,23 @@ export function Expenses() {
                 {formatDateHeader(dateKey)}
               </h3>
               <div className="space-y-3">
-                {dayExpenses.map((expense) => (
-                  <div key={expense.id} className={deleting === expense.id ? 'opacity-50' : ''}>
-                    <ExpenseCard
-                      expense={expense}
-                      members={group.members}
-                      currency={group.currency}
-                      onDelete={() => handleDelete(expense.id)}
-                    />
-                  </div>
-                ))}
+                {dayExpenses.map((expense) => {
+                  const canSignOff = currentUser
+                    ? expense.splits.some((s) => s.memberId === currentUser.id && !s.signedOff)
+                    : false;
+                  return (
+                    <div key={expense.id} className={deleting === expense.id ? 'opacity-50' : ''}>
+                      <ExpenseCard
+                        expense={expense}
+                        members={group.members}
+                        currency={group.currency}
+                        showSignOff={canSignOff}
+                        compactSignOff
+                        onDelete={() => handleDelete(expense.id)}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}

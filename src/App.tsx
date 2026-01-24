@@ -9,6 +9,7 @@ import { EditExpense } from './pages/EditExpense';
 import { PendingActions } from './pages/PendingActions';
 import { History } from './pages/History';
 import { Balances } from './pages/Balances';
+import { AddSettlement } from './pages/AddSettlement';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
               <Route path="/pending" element={<PendingActions />} />
               <Route path="/history" element={<History />} />
               <Route path="/balances" element={<Balances />} />
+              <Route path="/settle" element={<AddSettlement />} />
             </Routes>
           </Layout>
         </AppProvider>

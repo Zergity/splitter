@@ -10,6 +10,7 @@ interface ExpenseCardProps {
   members: Member[];
   currency: string;
   showSignOff?: boolean;
+  compactSignOff?: boolean;
   onDelete?: () => void;
 }
 
@@ -18,6 +19,7 @@ export function ExpenseCard({
   members,
   currency,
   showSignOff = false,
+  compactSignOff = false,
   onDelete,
 }: ExpenseCardProps) {
   const { currentUser, updateExpense } = useApp();
@@ -30,9 +32,13 @@ export function ExpenseCard({
   const payer = members.find((m) => m.id === expense.paidBy);
   const creator = members.find((m) => m.id === expense.createdBy);
   const allSigned = expense.splits.every((s) => s.signedOff);
+  const isSettlement = expense.splitType === 'settlement';
 
   // Check if expense has unassigned items (incomplete)
   const hasUnassignedItems = expense.items?.some((item) => !item.memberId) ?? false;
+
+  // For settlements, get the recipient (the person in splits)
+  const recipient = isSettlement ? members.find((m) => m.id === expense.splits[0]?.memberId) : null;
 
   const getMemberName = (id: string) => {
     if (currentUser && id === currentUser.id) return 'You';
@@ -47,32 +53,61 @@ export function ExpenseCard({
   const canEdit = currentUser && currentUser.id === expense.paidBy;
 
   return (
-    <div className="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-4">
+    <div className={`bg-gray-800 rounded-lg shadow-sm border ${isSettlement ? 'border-green-700' : 'border-gray-700'} p-4`}>
       <div className="flex justify-between items-start mb-2">
         <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="font-medium text-gray-100">{expense.description}</h3>
-            {canEdit && (
-              <Link
-                to={`/edit/${expense.id}`}
-                className="text-cyan-400 text-xs hover:text-cyan-300"
-              >
-                Edit
-              </Link>
-            )}
-          </div>
-          <p className="text-sm text-gray-400">
-            Paid by {currentUser && payer?.id === currentUser.id ? (
-              <span className="text-cyan-400">You</span>
-            ) : (payer?.name || 'Unknown')}
-            {creator && creator.id !== expense.paidBy && (
-              <span className="text-gray-500"> (added by {currentUser && creator.id === currentUser.id ? (
-                <span className="text-cyan-400">You</span>
-              ) : creator.name})</span>
-            )}
-          </p>
-          {/* Tags */}
-          <div className="flex flex-wrap items-center gap-1 mt-1">
+          {isSettlement ? (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-green-900 text-green-300">
+                  Settlement
+                </span>
+                {canEdit && (
+                  <button
+                    onClick={onDelete}
+                    className="text-red-400 text-xs hover:text-red-300"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+              <p className="text-sm mt-2">
+                <span className={currentUser && payer?.id === currentUser.id ? 'text-cyan-400 font-medium' : 'text-gray-100'}>
+                  {currentUser && payer?.id === currentUser.id ? 'You' : (payer?.name || 'Unknown')}
+                </span>
+                <span className="text-gray-500 mx-2">paid</span>
+                <span className={currentUser && recipient?.id === currentUser.id ? 'text-cyan-400 font-medium' : 'text-gray-100'}>
+                  {currentUser && recipient?.id === currentUser.id ? 'You' : (recipient?.name || 'Unknown')}
+                </span>
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <h3 className="font-medium text-gray-100">{expense.description}</h3>
+                {canEdit && (
+                  <Link
+                    to={`/edit/${expense.id}`}
+                    className="text-cyan-400 text-xs hover:text-cyan-300"
+                  >
+                    Edit
+                  </Link>
+                )}
+              </div>
+              <p className="text-sm text-gray-400">
+                Paid by {currentUser && payer?.id === currentUser.id ? (
+                  <span className="text-cyan-400">You</span>
+                ) : (payer?.name || 'Unknown')}
+                {creator && creator.id !== expense.paidBy && (
+                  <span className="text-gray-500"> (added by {currentUser && creator.id === currentUser.id ? (
+                    <span className="text-cyan-400">You</span>
+                  ) : creator.name})</span>
+                )}
+              </p>
+            </>
+          )}
+          {/* Tags - only show for non-settlements */}
+          {!isSettlement && <div className="flex flex-wrap items-center gap-1 mt-1">
             {expense.tags?.map((tag) => {
               const color = getTagColor(tag);
               return (
@@ -147,7 +182,7 @@ export function ExpenseCard({
                 </button>
               </div>
             )}
-          </div>
+          </div>}
         </div>
         <div className="text-right">
           <p className="font-semibold text-lg">
@@ -189,98 +224,123 @@ export function ExpenseCard({
         </div>
       </div>
 
-      <div className="mt-3 pt-3 border-t border-gray-700">
-        {/* Collapsed view: show only user's split */}
-        {!expanded && userSplit && (
-          <div
-            className="cursor-pointer"
-            onClick={() => setExpanded(true)}
-          >
-            <div className="flex justify-between items-center text-sm">
-              <span className="flex items-center gap-2">
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    userSplit.signedOff ? 'bg-green-500' : 'bg-yellow-500'
-                  }`}
-                />
-                Your share
-                {userSplit.signedOff && (
-                  <span className="text-xs text-green-400 font-medium">Signed</span>
-                )}
-              </span>
-              <span className="text-gray-400">
-                {formatCurrency(userSplit.amount, currency)}
-              </span>
+      {/* Settlement: simple confirmation status */}
+      {isSettlement ? (
+        <div className="mt-3 pt-3 border-t border-gray-700">
+          <div className="flex items-center justify-between gap-2 text-sm">
+            <div className="flex items-center gap-2">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  allSigned ? 'bg-green-500' : 'bg-yellow-500'
+                }`}
+              />
+              {allSigned ? (
+                <span className="text-green-400">Confirmed by recipient</span>
+              ) : (
+                <span className="text-yellow-400">
+                  Awaiting confirmation from {recipient && currentUser && recipient.id === currentUser.id ? 'You' : (recipient?.name || 'recipient')}
+                </span>
+              )}
             </div>
-            {expense.splits.length > 1 && (
-              <p className="text-xs text-cyan-400 mt-1">
-                Tap to see all {expense.splits.length} participants
-              </p>
+            {showSignOff && userSplit && !userSplit.signedOff && (
+              <SignOffButton expense={expense} compact />
             )}
           </div>
-        )}
-
-        {/* Collapsed view: no user split, show summary */}
-        {!expanded && !userSplit && (
-          <div
-            className="cursor-pointer"
-            onClick={() => setExpanded(true)}
-          >
-            <p className="text-sm text-gray-400">
-              {expense.splits.length} participant{expense.splits.length !== 1 ? 's' : ''}
-            </p>
-            <p className="text-xs text-cyan-400 mt-1">
-              Tap to see details
-            </p>
-          </div>
-        )}
-
-        {/* Expanded view: show all splits */}
-        {expanded && (
-          <div>
+        </div>
+      ) : (
+        <div className="mt-3 pt-3 border-t border-gray-700">
+          {/* Collapsed view: show only user's split */}
+          {!expanded && userSplit && (
             <div
-              className="flex justify-between items-center mb-2 cursor-pointer"
-              onClick={() => setExpanded(false)}
+              className="cursor-pointer"
+              onClick={() => setExpanded(true)}
             >
-              <p className="text-xs text-gray-500">
-                Split ({expense.splitType}):
-              </p>
-              <p className="text-xs text-cyan-400">
-                Tap to collapse
-              </p>
+              <div className="flex justify-between items-center text-sm">
+                <span className="flex items-center gap-2">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      userSplit.signedOff ? 'bg-green-500' : 'bg-yellow-500'
+                    }`}
+                  />
+                  Your share
+                  {userSplit.signedOff && (
+                    <span className="text-xs text-green-400 font-medium">Signed</span>
+                  )}
+                </span>
+                <span className="text-gray-400">
+                  {formatCurrency(userSplit.amount, currency)}
+                </span>
+              </div>
+              {expense.splits.length > 1 && (
+                <p className="text-xs text-cyan-400 mt-1">
+                  Tap to see all {expense.splits.length} participants
+                </p>
+              )}
             </div>
-            <div className="space-y-1">
-              {expense.splits.map((split) => (
-                <div
-                  key={split.memberId}
-                  className={`flex justify-between items-center text-sm ${
-                    currentUser && split.memberId === currentUser.id ? 'font-medium' : ''
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        split.signedOff ? 'bg-green-500' : 'bg-yellow-500'
-                      }`}
-                    />
-                    {currentUser && split.memberId === currentUser.id ? (
-                      <span className="text-cyan-400">You</span>
-                    ) : getMemberName(split.memberId)}
-                    {split.signedOff && (
-                      <span className="text-xs text-green-400 font-medium">Signed</span>
-                    )}
-                  </span>
-                  <span className="text-gray-400">
-                    {formatCurrency(split.amount, currency)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+          )}
 
-      {showSignOff && userSplit && !userSplit.signedOff && (
+          {/* Collapsed view: no user split, show summary */}
+          {!expanded && !userSplit && (
+            <div
+              className="cursor-pointer"
+              onClick={() => setExpanded(true)}
+            >
+              <p className="text-sm text-gray-400">
+                {expense.splits.length} participant{expense.splits.length !== 1 ? 's' : ''}
+              </p>
+              <p className="text-xs text-cyan-400 mt-1">
+                Tap to see details
+              </p>
+            </div>
+          )}
+
+          {/* Expanded view: show all splits */}
+          {expanded && (
+            <div>
+              <div
+                className="flex justify-between items-center mb-2 cursor-pointer"
+                onClick={() => setExpanded(false)}
+              >
+                <p className="text-xs text-gray-500">
+                  Split ({expense.splitType}):
+                </p>
+                <p className="text-xs text-cyan-400">
+                  Tap to collapse
+                </p>
+              </div>
+              <div className="space-y-1">
+                {expense.splits.map((split) => (
+                  <div
+                    key={split.memberId}
+                    className={`flex justify-between items-center text-sm ${
+                      currentUser && split.memberId === currentUser.id ? 'font-medium' : ''
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span
+                        className={`w-2 h-2 rounded-full ${
+                          split.signedOff ? 'bg-green-500' : 'bg-yellow-500'
+                        }`}
+                      />
+                      {currentUser && split.memberId === currentUser.id ? (
+                        <span className="text-cyan-400">You</span>
+                      ) : getMemberName(split.memberId)}
+                      {split.signedOff && (
+                        <span className="text-xs text-green-400 font-medium">Signed</span>
+                      )}
+                    </span>
+                    <span className="text-gray-400">
+                      {formatCurrency(split.amount, currency)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {showSignOff && userSplit && !userSplit.signedOff && !isSettlement && (
         <div className="mt-3 pt-3 border-t border-gray-700">
           {userSplit.previousAmount !== undefined && (
             <div className="mb-3 p-2 bg-orange-900/30 border border-orange-700 rounded-lg text-sm">
@@ -300,11 +360,11 @@ export function ExpenseCard({
               </p>
             </div>
           )}
-          <SignOffButton expense={expense} />
+          <SignOffButton expense={expense} compact={compactSignOff} />
         </div>
       )}
 
-      {onDelete && canEdit && (
+      {onDelete && canEdit && !isSettlement && (
         <div className="mt-3 pt-3 border-t border-gray-700">
           <button
             onClick={onDelete}

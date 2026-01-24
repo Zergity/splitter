@@ -4,11 +4,13 @@ import { useApp } from '../context/AppContext';
 
 interface SignOffButtonProps {
   expense: Expense;
+  compact?: boolean;
 }
 
-export function SignOffButton({ expense }: SignOffButtonProps) {
+export function SignOffButton({ expense, compact = false }: SignOffButtonProps) {
   const { signOffExpense } = useApp();
   const [loading, setLoading] = useState(false);
+  const isSettlement = expense.splitType === 'settlement';
 
   const handleSignOff = async () => {
     setLoading(true);
@@ -19,13 +21,23 @@ export function SignOffButton({ expense }: SignOffButtonProps) {
     }
   };
 
+  const buttonText = isSettlement
+    ? loading ? 'Confirming...' : 'Confirm'
+    : loading ? 'Signing...' : 'Sign Off';
+
   return (
     <button
       onClick={handleSignOff}
       disabled={loading}
-      className="w-full bg-cyan-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-cyan-700 disabled:opacity-50"
+      className={`text-white rounded-lg font-medium disabled:opacity-50 ${
+        compact ? 'py-1 px-3 text-sm' : 'w-full py-2 px-4'
+      } ${
+        isSettlement
+          ? 'bg-green-600 hover:bg-green-700'
+          : 'bg-cyan-600 hover:bg-cyan-700'
+      }`}
     >
-      {loading ? 'Signing...' : 'Sign Off'}
+      {buttonText}
     </button>
   );
 }

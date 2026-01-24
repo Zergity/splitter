@@ -79,7 +79,7 @@ export function PendingActions() {
                     currency={group.currency}
                   />
                   <p className="text-sm text-orange-400 mt-2 px-4">
-                    {unassignedCount} unassigned item{unassignedCount !== 1 ? 's' : ''} - tap Edit amounts to assign
+                    {unassignedCount} unassigned item{unassignedCount !== 1 ? 's' : ''} - tap Edit to assign
                   </p>
                 </div>
               );

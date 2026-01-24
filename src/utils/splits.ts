@@ -57,6 +57,18 @@ export function calculateSplits(
       }));
       break;
     }
+
+    case 'settlement':
+    default:
+      // Settlement: exact amounts, payer signs off automatically
+      calculatedSplits = splits.map((s) => ({
+        memberId: s.memberId,
+        value: s.value,
+        amount: s.value,
+        signedOff: s.memberId === payerId,
+        signedAt: s.memberId === payerId ? new Date().toISOString() : undefined,
+      }));
+      break;
   }
 
   return calculatedSplits;
@@ -104,5 +116,9 @@ export function validateSplits(
       }
       return { valid: true };
     }
+
+    case 'settlement':
+    default:
+      return { valid: true };
   }
 }
