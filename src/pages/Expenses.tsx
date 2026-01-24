@@ -244,7 +244,6 @@ export function Expenses() {
                         members={group.members}
                         currency={group.currency}
                         showSignOff={canSignOff}
-                        compactSignOff
                         onDelete={() => handleDelete(expense.id)}
                       />
                     </div>

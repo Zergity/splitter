@@ -10,7 +10,6 @@ interface ExpenseCardProps {
   members: Member[];
   currency: string;
   showSignOff?: boolean;
-  compactSignOff?: boolean;
   onDelete?: () => void;
 }
 
@@ -19,7 +18,6 @@ export function ExpenseCard({
   members,
   currency,
   showSignOff = false,
-  compactSignOff = false,
   onDelete,
 }: ExpenseCardProps) {
   const { currentUser, updateExpense } = useApp();
@@ -227,23 +225,18 @@ export function ExpenseCard({
       {/* Settlement: simple confirmation status */}
       {isSettlement ? (
         <div className="mt-3 pt-3 border-t border-gray-700">
-          <div className="flex items-center justify-between gap-2 text-sm">
-            <div className="flex items-center gap-2">
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  allSigned ? 'bg-green-500' : 'bg-yellow-500'
-                }`}
-              />
-              {allSigned ? (
-                <span className="text-green-400">Confirmed by recipient</span>
-              ) : (
-                <span className="text-yellow-400">
-                  Awaiting confirmation from {recipient && currentUser && recipient.id === currentUser.id ? 'You' : (recipient?.name || 'recipient')}
-                </span>
-              )}
-            </div>
-            {showSignOff && userSplit && !userSplit.signedOff && (
-              <SignOffButton expense={expense} compact />
+          <div className="flex items-center gap-2 text-sm">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                allSigned ? 'bg-green-500' : 'bg-yellow-500'
+              }`}
+            />
+            {allSigned ? (
+              <span className="text-green-400">Confirmed by recipient</span>
+            ) : (
+              <span className="text-yellow-400">
+                Awaiting confirmation from {recipient && currentUser && recipient.id === currentUser.id ? 'You' : (recipient?.name || 'recipient')}
+              </span>
             )}
           </div>
         </div>
@@ -340,27 +333,24 @@ export function ExpenseCard({
         </div>
       )}
 
-      {showSignOff && userSplit && !userSplit.signedOff && !isSettlement && (
+      {showSignOff && userSplit && !userSplit.signedOff && !isSettlement && userSplit.previousAmount !== undefined && (
         <div className="mt-3 pt-3 border-t border-gray-700">
-          {userSplit.previousAmount !== undefined && (
-            <div className="mb-3 p-2 bg-orange-900/30 border border-orange-700 rounded-lg text-sm">
-              <p className="text-orange-200 font-medium">Amount changed</p>
-              <p className="text-orange-400">
-                {formatCurrency(userSplit.previousAmount, currency)} → {formatCurrency(userSplit.amount, currency)}
-                {userSplit.amount > userSplit.previousAmount && (
-                  <span className="text-red-400 ml-1">
-                    (+{formatCurrency(userSplit.amount - userSplit.previousAmount, currency)})
-                  </span>
-                )}
-                {userSplit.amount < userSplit.previousAmount && (
-                  <span className="text-green-400 ml-1">
-                    (-{formatCurrency(userSplit.previousAmount - userSplit.amount, currency)})
-                  </span>
-                )}
-              </p>
-            </div>
-          )}
-          <SignOffButton expense={expense} compact={compactSignOff} />
+          <div className="p-2 bg-orange-900/30 border border-orange-700 rounded-lg text-sm">
+            <p className="text-orange-200 font-medium">Amount changed</p>
+            <p className="text-orange-400">
+              {formatCurrency(userSplit.previousAmount, currency)} → {formatCurrency(userSplit.amount, currency)}
+              {userSplit.amount > userSplit.previousAmount && (
+                <span className="text-red-400 ml-1">
+                  (+{formatCurrency(userSplit.amount - userSplit.previousAmount, currency)})
+                </span>
+              )}
+              {userSplit.amount < userSplit.previousAmount && (
+                <span className="text-green-400 ml-1">
+                  (-{formatCurrency(userSplit.previousAmount - userSplit.amount, currency)})
+                </span>
+              )}
+            </p>
+          </div>
         </div>
       )}
 
@@ -375,9 +365,14 @@ export function ExpenseCard({
         </div>
       )}
 
-      <p className="text-xs text-gray-500 mt-3">
-        {formatRelativeTime(expense.createdAt)}
-      </p>
+      <div className="flex justify-between items-center mt-3">
+        <p className="text-xs text-gray-500">
+          {formatRelativeTime(expense.createdAt)}
+        </p>
+        {showSignOff && userSplit && !userSplit.signedOff && (
+          <SignOffButton expense={expense} compact />
+        )}
+      </div>
 
       {/* Receipt modal */}
       {showReceipt && expense.receiptUrl && (
