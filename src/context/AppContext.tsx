@@ -22,7 +22,7 @@ interface AppContextType {
   updateGroupSettings: (name: string, currency: string) => Promise<void>;
   createExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => Promise<void>;
   updateExpense: (id: string, updates: Partial<Expense>) => Promise<void>;
-  deleteExpense: (id: string) => Promise<void>;
+  deleteExpense: (expense: Expense) => Promise<void>;
   signOffExpense: (expense: Expense) => Promise<void>;
   claimExpenseItem: (expenseId: string, itemId: string, claim: boolean) => Promise<void>;
 }
@@ -116,9 +116,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  const deleteExpense = useCallback(async (id: string) => {
-    await api.deleteExpense(id);
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
+  const deleteExpense = useCallback(async (expense: Expense) => {
+    const updated = await api.softDeleteExpense(expense);
+    setExpenses((prev) =>
+      prev.map((e) => (e.id === expense.id ? updated : e))
+    );
   }, []);
 
   const signOffExpense = useCallback(

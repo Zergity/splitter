@@ -65,6 +65,20 @@ export async function deleteExpense(id: string): Promise<void> {
   });
 }
 
+// Soft delete - mark expense with 'deleted' tag instead of actually deleting
+export async function softDeleteExpense(
+  expense: Expense
+): Promise<Expense> {
+  const tags = expense.tags || [];
+  if (!tags.includes('deleted')) {
+    return updateExpense(expense.id, {
+      tags: [...tags, 'deleted'],
+    });
+  }
+  return expense;
+}
+
+
 // Receipt processing
 export async function processReceipt(file: File): Promise<ReceiptOCRResult> {
   const formData = new FormData();

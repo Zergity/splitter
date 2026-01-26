@@ -1,9 +1,22 @@
+import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { ExpenseCard } from '../components/ExpenseCard';
-import { formatCurrency } from '../utils/balances';
+import { formatCurrency, isDeleted } from '../utils/balances';
+import { Expense } from '../types';
 
 export function History() {
-  const { group, expenses, currentUser } = useApp();
+  const { group, expenses, currentUser, deleteExpense } = useApp();
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const handleDelete = async (expense: Expense) => {
+    if (!confirm('Are you sure you want to delete this expense?')) return;
+    setDeleting(expense.id);
+    try {
+      await deleteExpense(expense);
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   if (!group) return null;
 
@@ -20,9 +33,10 @@ export function History() {
     );
   }
 
-  // Fully signed expenses where current user participated
+  // Fully signed expenses where current user participated (exclude deleted)
   const signedExpenses = expenses.filter(
     (e) =>
+      !isDeleted(e) &&
       e.splits.every((s) => s.signedOff) &&
       (e.paidBy === currentUser.id ||
         e.splits.some((s) => s.memberId === currentUser.id))
@@ -54,11 +68,12 @@ export function History() {
             const isPayer = expense.paidBy === currentUser.id;
 
             return (
-              <div key={expense.id}>
+              <div key={expense.id} className={deleting === expense.id ? 'opacity-50' : ''}>
                 <ExpenseCard
                   expense={expense}
                   members={group.members}
                   currency={group.currency}
+                  onDelete={() => handleDelete(expense)}
                 />
                 <div className="text-sm mt-2 px-4 text-gray-400">
                   {isPayer ? (

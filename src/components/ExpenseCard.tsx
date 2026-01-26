@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Expense, Member } from '../types';
-import { formatCurrency, formatRelativeTime, getTagColor } from '../utils/balances';
+import { formatCurrency, formatRelativeTime, getTagColor, isDeleted } from '../utils/balances';
 import { SignOffButton } from './SignOffButton';
 import { useApp } from '../context/AppContext';
 
@@ -33,6 +33,7 @@ export function ExpenseCard({
   const creator = members.find((m) => m.id === expense.createdBy);
   const allSigned = expense.splits.every((s) => s.signedOff);
   const isSettlement = expense.splitType === 'settlement';
+  const expenseDeleted = isDeleted(expense);
 
   // Check if expense has unassigned items (incomplete)
   const hasUnassignedItems = expense.items?.some((item) => !item.memberId) ?? false;
@@ -57,7 +58,7 @@ export function ExpenseCard({
   const canEdit = currentUser && currentUser.id === expense.paidBy;
 
   return (
-    <div className={`bg-gray-800 rounded-lg shadow-sm border ${isSettlement ? 'border-green-700' : 'border-gray-700'} p-4`}>
+    <div className={`bg-gray-800 rounded-lg shadow-sm border ${isSettlement ? 'border-green-700' : 'border-gray-700'} p-4 ${expenseDeleted ? 'opacity-60' : ''}`}>
       <div className="flex justify-between items-start mb-2">
         <div className="flex-1">
           {isSettlement ? (
@@ -66,7 +67,7 @@ export function ExpenseCard({
                 <span className="text-xs px-2 py-0.5 rounded-full bg-green-900 text-green-300">
                   Settlement
                 </span>
-                {canEdit && (
+                {canEdit && !expenseDeleted && (
                   <button
                     onClick={onDelete}
                     className="text-red-400 text-xs hover:text-red-300"
@@ -110,9 +111,9 @@ export function ExpenseCard({
               </p>
             </>
           )}
-          {/* Tags - only show for non-settlements */}
+          {/* Tags - only show for non-settlements, hide 'deleted' system tag */}
           {!isSettlement && <div className="flex flex-wrap items-center gap-1 mt-1">
-            {expense.tags?.map((tag) => {
+            {expense.tags?.filter((t) => t !== 'deleted').map((tag) => {
               const color = getTagColor(tag);
               return (
                 <button
@@ -215,14 +216,16 @@ export function ExpenseCard({
             )}
             <span
               className={`text-xs px-2 py-0.5 rounded-full ${
-                hasUnassignedItems
+                expenseDeleted
+                  ? 'bg-red-900 text-red-300'
+                  : hasUnassignedItems
                   ? 'bg-orange-900 text-orange-300'
                   : allSigned
                   ? 'bg-green-900 text-green-300'
                   : 'bg-yellow-900 text-yellow-300'
               }`}
             >
-              {hasUnassignedItems ? 'Incomplete' : allSigned ? 'Accepted' : 'Pending'}
+              {expenseDeleted ? 'Deleted' : hasUnassignedItems ? 'Incomplete' : allSigned ? 'Accepted' : 'Pending'}
             </span>
           </div>
         </div>
@@ -450,7 +453,7 @@ export function ExpenseCard({
         </div>
       )}
 
-      {onDelete && canEdit && !isSettlement && (
+      {onDelete && canEdit && !isSettlement && !expenseDeleted && (
         <div className="mt-3 pt-3 border-t border-gray-700">
           <button
             onClick={onDelete}

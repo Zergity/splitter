@@ -1,5 +1,10 @@
 import { Expense, Member, MemberBalance, Settlement } from '../types';
 
+// Check if an expense is soft-deleted
+export function isDeleted(expense: Expense): boolean {
+  return expense.tags?.includes('deleted') ?? false;
+}
+
 export function calculateBalances(
   expenses: Expense[],
   members: Member[]
@@ -13,7 +18,10 @@ export function calculateBalances(
     pendingMap.set(m.id, 0);
   });
 
-  expenses.forEach((expense) => {
+  // Filter out deleted expenses from balance calculations
+  const activeExpenses = expenses.filter((e) => !isDeleted(e));
+
+  activeExpenses.forEach((expense) => {
     expense.splits.forEach((split) => {
       const map = split.signedOff ? signedMap : pendingMap;
       const currentBalance = map.get(split.memberId) || 0;

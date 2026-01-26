@@ -2,37 +2,47 @@ import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { ExpenseCard } from '../components/ExpenseCard';
-import { getDateKey, formatDateHeader, getTagColor } from '../utils/balances';
+import { getDateKey, formatDateHeader, getTagColor, isDeleted } from '../utils/balances';
 import { Expense, Member } from '../types';
 
 export function Expenses() {
   const { group, expenses, currentUser, deleteExpense } = useApp();
-  const [filter, setFilter] = useState<'all' | 'mine'>('all');
+  const [filter, setFilter] = useState<'all' | 'mine' | 'deleted'>('all');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
   if (!group) return null;
 
-  // Get all unique tags from expenses
+  // Get all unique tags from expenses (exclude 'deleted' system tag)
   const allTags = useMemo(() => {
     const tags = new Set<string>();
-    expenses.forEach((e) => e.tags?.forEach((t) => tags.add(t)));
+    expenses.forEach((e) => e.tags?.forEach((t) => {
+      if (t !== 'deleted') tags.add(t);
+    }));
     return Array.from(tags).sort();
   }, [expenses]);
 
   // Apply filters
   let filteredExpenses = expenses;
 
-  // Filter by mine/all
+  // Filter by mine/all/deleted
   if (filter === 'mine') {
+    // "Mine" view: show user's expenses (exclude deleted)
     filteredExpenses = filteredExpenses.filter(
       (e) =>
-        e.paidBy === currentUser?.id ||
-        e.splits.some((s) => s.memberId === currentUser?.id)
+        !isDeleted(e) &&
+        (e.paidBy === currentUser?.id ||
+          e.splits.some((s) => s.memberId === currentUser?.id))
     );
+  } else if (filter === 'deleted') {
+    // "Deleted" view: show all deleted expenses from everyone
+    filteredExpenses = filteredExpenses.filter((e) => isDeleted(e));
+  } else {
+    // "All" view: hide deleted expenses
+    filteredExpenses = filteredExpenses.filter((e) => !isDeleted(e));
   }
 
-  // Filter by tag
+  // Filter by tag (exclude 'deleted' from tag filter options)
   if (selectedTag) {
     filteredExpenses = filteredExpenses.filter((e) =>
       e.tags?.includes(selectedTag)
@@ -69,11 +79,11 @@ export function Expenses() {
     return groups;
   }, [sortedExpenses]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (expense: Expense) => {
     if (!confirm('Are you sure you want to delete this expense?')) return;
-    setDeleting(id);
+    setDeleting(expense.id);
     try {
-      await deleteExpense(id);
+      await deleteExpense(expense);
     } finally {
       setDeleting(null);
     }
@@ -181,7 +191,17 @@ export function Expenses() {
                 : 'bg-gray-700 text-gray-300'
             }`}
           >
-            My expenses
+            Mine
+          </button>
+          <button
+            onClick={() => setFilter('deleted')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium ${
+              filter === 'deleted'
+                ? 'bg-red-600 text-white'
+                : 'bg-gray-700 text-gray-300'
+            }`}
+          >
+            Trash
           </button>
         </div>
       )}
@@ -244,7 +264,7 @@ export function Expenses() {
                         members={group.members}
                         currency={group.currency}
                         showSignOff={canSignOff}
-                        onDelete={() => handleDelete(expense.id)}
+                        onDelete={() => handleDelete(expense)}
                       />
                     </div>
                   );
