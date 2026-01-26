@@ -15,6 +15,7 @@ interface ExtractedData {
   items: ReceiptItem[];
   date?: string;
   merchant?: string;
+  discount?: number; // discount percentage (e.g., 10 for 10% off)
   total?: number;
   confidence: number;
 }
@@ -98,19 +99,19 @@ export const onRequestPost: PagesFunction<ReceiptsEnv> = async (context) => {
           '@cf/meta/llama-3.2-11b-vision-instruct',
           {
             image: Array.from(uint8Array),
-            prompt: `This is a Vietnamese receipt/bill. Extract purchased items with their UNIT PRICE (ĐG) and QUANTITY (SL).
+            prompt: `Extract items from this receipt/bill.
 
-Return ONLY JSON in this format:
-{"items":[{"description":"item name","amount":"15.000","qty":2}],"merchant":"store name","total":"150.000"}
+Return JSON:
+{"items":[{"description":"item name","amount":"15.000","qty":2}],"merchant":"store name","discount":10,"total":"150.000"}
 
 Rules:
-- Extract each line item with: description, unit price (ĐG, Đơn Giá), quantity (SL, Số lượng)
-- amount = unit price (ĐG or Đơn giá), NOT line total
-- qty = quantity (SL or Số Lượng), default 1 if not shown
-- discount = dicount rate (Chiết khấu, Khuyến mãi), the percentage value or negative numbers
-- amount/unit price should be reduced by discount if shown
-- Keep price format as string (e.g. "15.000")
-- JSON only, no other text`,
+- description: item name
+- amount: UNIT PRICE (price per single item), NOT line total
+- qty: quantity, default 1
+- discount: discount PERCENTAGE as number (e.g., 10 for 10% off, 0 if no discount)
+- total: final amount on bill
+- Keep price format as string
+- JSON only`,
             max_tokens: 1024,
           }
         );
@@ -183,6 +184,17 @@ Rules:
                 }
               }
 
+              // Parse discount percentage
+              let discount: number | undefined;
+              if (typeof parsed.discount === 'number' && parsed.discount > 0) {
+                discount = parsed.discount;
+              } else if (typeof parsed.discount === 'string') {
+                const parsedDiscount = parseFloat(parsed.discount.replace('%', ''));
+                if (!isNaN(parsedDiscount) && parsedDiscount > 0) {
+                  discount = parsedDiscount;
+                }
+              }
+
               // Parse total with same Vietnamese format handling
               let total: number | undefined;
               if (typeof parsed.total === 'number') {
@@ -201,6 +213,7 @@ Rules:
                 items,
                 date: typeof parsed.date === 'string' ? parsed.date : undefined,
                 merchant: typeof parsed.merchant === 'string' ? parsed.merchant : undefined,
+                discount,
                 total: total && !isNaN(total) ? Math.round(total * 100) / 100 : undefined,
                 confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
               };

@@ -16,6 +16,7 @@ export function AddExpense() {
   const [error, setError] = useState<string | null>(null);
   const [receiptDate, setReceiptDate] = useState<string | undefined>(undefined);
   const [items, setItems] = useState<ReceiptItem[]>([]);
+  const [discount, setDiscount] = useState<number | undefined>(undefined);
   const [manualTotal, setManualTotal] = useState<number | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
@@ -52,7 +53,15 @@ export function AddExpense() {
   };
 
   const handleReceiptProcessed = (result: ReceiptOCRResult) => {
+    // Store items without discount applied - discount will be applied via handleDiscountChange
     setItems(result.extracted.items);
+
+    // Set discount (will trigger recalculation if > 0)
+    if (result.extracted.discount && result.extracted.discount > 0) {
+      handleDiscountChange(result.extracted.discount, result.extracted.items);
+    } else {
+      setDiscount(undefined);
+    }
 
     if (result.extracted.merchant) {
       setDescription(result.extracted.merchant);
@@ -62,12 +71,46 @@ export function AddExpense() {
     }
   };
 
+  // Handle discount change - recalculate all item amounts
+  const handleDiscountChange = (newDiscount: number | undefined, currentItems?: ReceiptItem[]) => {
+    const itemsToUpdate = currentItems || items;
+    const oldDiscount = discount || 0;
+    const newDiscountValue = newDiscount || 0;
+
+    if (itemsToUpdate.length === 0) {
+      setDiscount(newDiscount);
+      return;
+    }
+
+    // Reverse old discount and apply new discount
+    const updatedItems = itemsToUpdate.map(item => {
+      // Reverse old discount to get original amount
+      const originalAmount = oldDiscount > 0
+        ? item.amount / (1 - oldDiscount / 100)
+        : item.amount;
+
+      // Apply new discount
+      const newAmount = newDiscountValue > 0
+        ? originalAmount * (1 - newDiscountValue / 100)
+        : originalAmount;
+
+      return {
+        ...item,
+        amount: roundNumber(newAmount, 2),
+      };
+    });
+
+    setItems(updatedItems);
+    setDiscount(newDiscount && newDiscount > 0 ? newDiscount : undefined);
+  };
+
   const handleReceiptError = (errorMessage: string) => {
     setError(errorMessage);
   };
 
   const handleClearReceipt = () => {
     setItems([]);
+    setDiscount(undefined);
     setReceiptDate(undefined);
     setDescription('');
     setManualTotal(null);
@@ -206,6 +249,7 @@ export function AddExpense() {
         splitType: 'exact',
         splits,
         items, // Store items for later editing
+        discount, // Store discount percentage
         tags: tags.length > 0 ? tags : undefined,
         receiptDate,
       });
@@ -361,6 +405,42 @@ export function AddExpense() {
             Drag to items or "+ Add item" below
           </p>
         </div>
+
+        {/* Discount - show when items exist */}
+        {hasItems && (
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Discount %
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={discount || ''}
+                onChange={(e) => {
+                  const value = e.target.value ? parseFloat(e.target.value) : undefined;
+                  handleDiscountChange(value && value > 0 && value <= 100 ? value : undefined);
+                }}
+                placeholder="0"
+                className="w-24 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100"
+              />
+              <span className="text-gray-400 text-sm">
+                {discount ? `${discount}% off all items` : 'No discount'}
+              </span>
+              {discount && (
+                <button
+                  type="button"
+                  onClick={() => handleDiscountChange(undefined)}
+                  className="text-red-400 hover:text-red-300 text-sm"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Amounts section */}
         <div>

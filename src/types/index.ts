@@ -36,6 +36,7 @@ export interface Expense {
   splitType: SplitType;
   splits: ExpenseSplit[];
   items?: ReceiptItem[]; // stored items for editing later
+  discount?: number; // discount percentage (e.g., 10 for 10% off)
   tags?: string[]; // user-defined tags
   createdAt: string;
   receiptUrl?: string;   // URL to receipt image in R2
@@ -57,6 +58,7 @@ export interface ReceiptOCRResult {
     items: ReceiptItem[];
     date?: string;
     merchant?: string;
+    discount?: number; // discount percentage (e.g., 10 for 10% off)
     total?: number;
     confidence: number;
   };
