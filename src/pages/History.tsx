@@ -9,7 +9,7 @@ export function History() {
   const [deleting, setDeleting] = useState<string | null>(null);
 
   const handleDelete = async (expense: Expense) => {
-    if (!confirm('Are you sure you want to delete this expense?')) return;
+    if (!confirm('Are you sure you want to delete this transaction?')) return;
     setDeleting(expense.id);
     try {
       await deleteExpense(expense);
@@ -54,9 +54,9 @@ export function History() {
 
       {sortedExpenses.length === 0 ? (
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-center">
-          <p className="text-gray-400">No completed expenses yet</p>
+          <p className="text-gray-400">No completed transactions yet</p>
           <p className="text-sm text-gray-500 mt-1">
-            Expenses appear here once all participants have accepted
+            Transactions appear here once all participants have accepted
           </p>
         </div>
       ) : (

@@ -152,7 +152,7 @@ export function Dashboard() {
               to="/add"
               className="bg-cyan-600 text-white rounded-lg p-4 text-center font-medium hover:bg-cyan-700"
             >
-              Add Expense
+              Add Transaction
             </Link>
             <Link
               to="/balances"
@@ -167,7 +167,7 @@ export function Dashboard() {
       <div className="bg-gray-800 rounded-lg shadow-sm border border-gray-700 p-4">
         <h3 className="font-medium mb-3">Recent Activity</h3>
         {expenses.length === 0 ? (
-          <p className="text-gray-400 text-sm">No expenses yet</p>
+          <p className="text-gray-400 text-sm">No transactions yet</p>
         ) : (
           <div className="space-y-2">
             {expenses

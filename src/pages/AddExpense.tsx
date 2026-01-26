@@ -222,7 +222,7 @@ export function AddExpense() {
 
   return (
     <div className="pb-20">
-      <h2 className="text-xl font-bold mb-6">Add Expense</h2>
+      <h2 className="text-xl font-bold mb-6">Add Transaction</h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Receipt capture - always show */}
@@ -245,7 +245,7 @@ export function AddExpense() {
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="What was this expense for?"
+            placeholder="What was this transaction for?"
             className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100"
           />
         </div>
@@ -414,7 +414,7 @@ export function AddExpense() {
           disabled={submitting || items.length === 0}
           className="w-full bg-cyan-600 text-white py-3 rounded-lg font-medium hover:bg-cyan-700 disabled:opacity-50"
         >
-          {submitting ? 'Adding...' : 'Add Expense'}
+          {submitting ? 'Adding...' : 'Add Transaction'}
         </button>
       </form>
     </div>

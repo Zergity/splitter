@@ -80,7 +80,7 @@ export function Expenses() {
   }, [sortedExpenses]);
 
   const handleDelete = async (expense: Expense) => {
-    if (!confirm('Are you sure you want to delete this expense?')) return;
+    if (!confirm('Are you sure you want to delete this transaction?')) return;
     setDeleting(expense.id);
     try {
       await deleteExpense(expense);
@@ -152,7 +152,7 @@ export function Expenses() {
   return (
     <div className="pb-20">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold">All Expenses</h2>
+        <h2 className="text-xl font-bold">All Transactions</h2>
         <div className="flex gap-2">
           {expenses.length > 0 && (
             <button
@@ -240,9 +240,9 @@ export function Expenses() {
 
       {groupedExpenses.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
-          <p>No expenses yet</p>
+          <p>No transactions yet</p>
           <Link to="/add" className="text-cyan-400 font-medium mt-2 inline-block">
-            Add your first expense
+            Add your first transaction
           </Link>
         </div>
       ) : (

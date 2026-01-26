@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 
 const navItems = [
   { to: '/', label: 'Home' },
-  { to: '/expenses', label: 'Expenses' },
+  { to: '/expenses', label: 'Transactions' },
   { to: '/add', label: 'Add' },
   { to: '/pending', label: 'Pending' },
   { to: '/balances', label: 'Balances' },

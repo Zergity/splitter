@@ -147,7 +147,7 @@ export function EditExpense() {
   if (!group || !expense) {
     return (
       <div className="text-center py-8 text-gray-400">
-        Expense not found
+        Transaction not found
       </div>
     );
   }
@@ -155,7 +155,7 @@ export function EditExpense() {
   if (!canEdit) {
     return (
       <div className="text-center py-8 text-gray-400">
-        You don't have permission to edit this expense
+        You don't have permission to edit this transaction
       </div>
     );
   }
@@ -249,7 +249,7 @@ export function EditExpense() {
 
   return (
     <div className="pb-20">
-      <h2 className="text-xl font-bold mb-6">Edit Expense</h2>
+      <h2 className="text-xl font-bold mb-6">Edit Transaction</h2>
 
       <div className="bg-yellow-900/30 border border-yellow-700 text-yellow-200 px-4 py-3 rounded-lg mb-6 text-sm">
         Changing amounts will require affected members to accept again.
@@ -264,7 +264,7 @@ export function EditExpense() {
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="What was this expense for?"
+            placeholder="What was this transaction for?"
             className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100"
           />
         </div>
