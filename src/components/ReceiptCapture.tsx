@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import Compressor from 'compressorjs';
 import { processReceipt } from '../api/client';
 import { ReceiptOCRResult } from '../types';
 
@@ -8,8 +9,33 @@ interface ReceiptCaptureProps {
   disabled?: boolean;
 }
 
+// Compress image before uploading
+function compressImage(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    new Compressor(file, {
+      quality: 0.8,
+      maxWidth: 1920,
+      maxHeight: 1920,
+      convertSize: 500000, // Convert to JPEG if > 500KB
+      success: (result) => {
+        // Convert Blob to File if needed
+        const compressedFile = result instanceof File
+          ? result
+          : new File([result], file.name, { type: result.type });
+        console.log(`Compressed: ${(file.size / 1024).toFixed(0)}KB → ${(compressedFile.size / 1024).toFixed(0)}KB`);
+        resolve(compressedFile);
+      },
+      error: (err) => {
+        console.warn('Compression failed, using original:', err);
+        resolve(file); // Fallback to original on error
+      },
+    });
+  });
+}
+
 export function ReceiptCapture({ onProcessed, onError, disabled }: ReceiptCaptureProps) {
   const [processing, setProcessing] = useState(false);
+  const [status, setStatus] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -17,13 +43,20 @@ export function ReceiptCapture({ onProcessed, onError, disabled }: ReceiptCaptur
     setProcessing(true);
 
     try {
-      const result = await processReceipt(file);
+      // Compress image first
+      setStatus('Compressing...');
+      const compressedFile = await compressImage(file);
+
+      // Send to AI
+      setStatus('Scanning receipt...');
+      const result = await processReceipt(compressedFile);
       onProcessed(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to process receipt';
       onError?.(message);
     } finally {
       setProcessing(false);
+      setStatus('');
     }
   };
 
@@ -42,7 +75,7 @@ export function ReceiptCapture({ onProcessed, onError, disabled }: ReceiptCaptur
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
         </svg>
-        <span className="text-sm text-gray-300">Scanning receipt...</span>
+        <span className="text-sm text-gray-300">{status || 'Processing...'}</span>
       </div>
     );
   }
