@@ -24,6 +24,7 @@ interface AppContextType {
   updateExpense: (id: string, updates: Partial<Expense>) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
   signOffExpense: (expense: Expense) => Promise<void>;
+  claimExpenseItem: (expenseId: string, itemId: string, claim: boolean) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -131,6 +132,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [currentUser]
   );
 
+  const claimExpenseItem = useCallback(
+    async (expenseId: string, itemId: string, claim: boolean) => {
+      if (!currentUser) return;
+      const expense = expenses.find((e) => e.id === expenseId);
+      if (!expense) return;
+      const updated = await api.claimExpenseItem(expense, itemId, currentUser.id, claim);
+      setExpenses((prev) =>
+        prev.map((e) => (e.id === expenseId ? updated : e))
+      );
+    },
+    [currentUser, expenses]
+  );
+
   // Initial load
   useEffect(() => {
     refreshData();
@@ -163,6 +177,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateExpense,
         deleteExpense,
         signOffExpense,
+        claimExpenseItem,
       }}
     >
       {children}

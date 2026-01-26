@@ -106,3 +106,90 @@ export async function signOffExpense(
 
   return updateExpense(expense.id, { splits: updatedSplits });
 }
+
+// Claim/unclaim expense item helper
+export async function claimExpenseItem(
+  expense: Expense,
+  itemId: string,
+  memberId: string,
+  claim: boolean // true = claim, false = unclaim
+): Promise<Expense> {
+  if (!expense.items) {
+    throw new Error('Expense has no items');
+  }
+
+  // Update the item's memberId
+  const updatedItems = expense.items.map((item) => {
+    if (item.id === itemId) {
+      return {
+        ...item,
+        memberId: claim ? memberId : undefined,
+      };
+    }
+    return item;
+  });
+
+  // Calculate splits from items
+  // Sum amounts by member
+  const memberAmounts = new Map<string, number>();
+  let assignedTotal = 0;
+
+  for (const item of updatedItems) {
+    if (item.memberId) {
+      const current = memberAmounts.get(item.memberId) || 0;
+      memberAmounts.set(item.memberId, current + item.amount);
+      assignedTotal += item.amount;
+    }
+  }
+
+  // Payer takes the remainder (total - assigned items)
+  const payerRemainder = expense.amount - assignedTotal;
+  const payerAmount = memberAmounts.get(expense.paidBy) || 0;
+  memberAmounts.set(expense.paidBy, payerAmount + payerRemainder);
+
+  // Build new splits array
+  // Both claim and unclaim auto-accept for the person taking action and the payer
+  // Expenses with unassigned items go to "Incomplete" list
+  const now = new Date().toISOString();
+  const updatedSplits: typeof expense.splits = [];
+
+  for (const [splitMemberId, amount] of memberAmounts.entries()) {
+    // Skip members with 0 amount (unless they're the payer)
+    if (amount === 0 && splitMemberId !== expense.paidBy) {
+      continue;
+    }
+
+    const existingSplit = expense.splits.find((s) => s.memberId === splitMemberId);
+    const isPayer = splitMemberId === expense.paidBy;
+    const isClaimer = splitMemberId === memberId;
+
+    // Auto-sign for the person taking action and the payer
+    // Others keep their existing status
+    let signedOff: boolean;
+    let signedAt: string | undefined;
+
+    if (isPayer || isClaimer) {
+      signedOff = true;
+      signedAt = now;
+    } else if (existingSplit) {
+      signedOff = existingSplit.signedOff;
+      signedAt = existingSplit.signedAt;
+    } else {
+      signedOff = false;
+    }
+
+    updatedSplits.push({
+      memberId: splitMemberId,
+      value: amount,
+      amount: amount,
+      signedOff,
+      signedAt,
+    });
+  }
+
+  return updateExpense(expense.id, {
+    items: updatedItems,
+    splits: updatedSplits,
+    splitType: 'exact',
+  });
+}
