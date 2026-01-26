@@ -1,6 +1,9 @@
 import { useState, useRef } from 'react';
-import { processReceipt } from '../api/client';
+import Tesseract from 'tesseract.js';
+import { processReceipt, parseOCRText } from '../api/client';
 import { ReceiptOCRResult } from '../types';
+
+const MAX_IMAGE_DIMENSION = 1500;
 
 interface ReceiptCaptureProps {
   onProcessed: (result: ReceiptOCRResult) => void;
@@ -8,22 +11,105 @@ interface ReceiptCaptureProps {
   disabled?: boolean;
 }
 
+// Resize image for better OCR
+async function resizeImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+
+      let { width, height } = img;
+      if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
+        if (width > height) {
+          height = Math.round((height * MAX_IMAGE_DIMENSION) / width);
+          width = MAX_IMAGE_DIMENSION;
+        } else {
+          width = Math.round((width * MAX_IMAGE_DIMENSION) / height);
+          height = MAX_IMAGE_DIMENSION;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', 0.9));
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Failed to load image'));
+    };
+
+    img.src = objectUrl;
+  });
+}
+
 export function ReceiptCapture({ onProcessed, onError, disabled }: ReceiptCaptureProps) {
   const [processing, setProcessing] = useState(false);
+  const [status, setStatus] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  // Client-side OCR fallback using Tesseract.js
+  const runClientOCR = async (file: File): Promise<ReceiptOCRResult> => {
+    setStatus('Preparing image...');
+    const imageData = await resizeImage(file);
+
+    setStatus('Scanning receipt...');
+    const result = await Tesseract.recognize(imageData, 'vie+eng', {
+      logger: (m) => {
+        if (m.status === 'recognizing text') {
+          setStatus(`Scanning... ${Math.round(m.progress * 100)}%`);
+        }
+      },
+    });
+
+    const ocrText = result.data.text;
+    console.log('OCR Text:', ocrText);
+
+    // Send to AI for parsing
+    setStatus('Analyzing with AI...');
+    const parsed = await parseOCRText(ocrText);
+
+    return {
+      success: true,
+      extracted: {
+        ...parsed.extracted,
+        confidence: result.data.confidence / 100,
+      },
+    };
+  };
 
   const handleFile = async (file: File) => {
     setProcessing(true);
 
     try {
+      // Try vision AI first
+      setStatus('Processing with AI...');
       const result = await processReceipt(file);
-      onProcessed(result);
+
+      // If vision AI failed or returned no items, fallback to client OCR
+      if (result.useClientOCR) {
+        console.log('Vision AI returned no results, falling back to client OCR');
+        const ocrResult = await runClientOCR(file);
+        onProcessed(ocrResult);
+      } else {
+        onProcessed(result);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to process receipt';
       onError?.(message);
     } finally {
       setProcessing(false);
+      setStatus('');
     }
   };
 
@@ -42,7 +128,7 @@ export function ReceiptCapture({ onProcessed, onError, disabled }: ReceiptCaptur
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
         </svg>
-        <span className="text-sm text-gray-300">Scanning receipt...</span>
+        <span className="text-sm text-gray-300">{status || 'Processing...'}</span>
       </div>
     );
   }

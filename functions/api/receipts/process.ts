@@ -225,12 +225,26 @@ Rules:
         }
       } catch (aiError) {
         console.error('AI processing error:', aiError);
-        const errorMessage = aiError instanceof Error ? aiError.message : String(aiError);
-        return Response.json(
-          { success: false, error: `AI processing failed: ${errorMessage}` },
-          { status: 500 }
-        );
+        // Vision AI failed - signal client to use OCR fallback
+        return Response.json({
+          success: true,
+          data: {
+            extracted,
+            useClientOCR: true,
+          },
+        });
       }
+    }
+
+    // If vision AI returned no items, signal client to use OCR fallback
+    if (extracted.items.length === 0) {
+      return Response.json({
+        success: true,
+        data: {
+          extracted,
+          useClientOCR: true,
+        },
+      });
     }
 
     return Response.json({

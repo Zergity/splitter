@@ -79,8 +79,8 @@ export async function softDeleteExpense(
 }
 
 
-// Receipt processing
-export async function processReceipt(file: File): Promise<ReceiptOCRResult> {
+// Receipt processing - returns result or signals to use client OCR
+export async function processReceipt(file: File): Promise<ReceiptOCRResult & { useClientOCR?: boolean }> {
   const formData = new FormData();
   formData.append('receipt', file);
 
@@ -89,10 +89,32 @@ export async function processReceipt(file: File): Promise<ReceiptOCRResult> {
     body: formData,
   });
 
-  const data: ApiResponse<{ extracted: ReceiptOCRResult['extracted'] }> = await response.json();
+  const data: ApiResponse<{ extracted: ReceiptOCRResult['extracted']; useClientOCR?: boolean }> = await response.json();
 
   if (!data.success || !data.data) {
     throw new Error(data.error || 'Failed to process receipt');
+  }
+
+  return {
+    success: true,
+    extracted: data.data.extracted,
+    useClientOCR: data.data.useClientOCR,
+  };
+}
+
+// Parse OCR text with AI (fallback when vision fails)
+export async function parseOCRText(ocrText: string): Promise<ReceiptOCRResult> {
+  const response = await fetch(`${API_BASE}/receipts/parse`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ ocrText }),
+  });
+
+  const data: ApiResponse<{ extracted: ReceiptOCRResult['extracted'] }> = await response.json();
+
+  if (!data.success || !data.data) {
+    throw new Error(data.error || 'Failed to parse receipt');
   }
 
   return {
