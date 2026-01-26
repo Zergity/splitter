@@ -191,7 +191,7 @@ export function Expenses() {
                 : 'bg-gray-700 text-gray-300'
             }`}
           >
-            Mine
+            Yours
           </button>
           <button
             onClick={() => setFilter('deleted')}
