@@ -54,8 +54,11 @@ export function ExpenseCard({
     ? expense.splits.find((s) => s.memberId === currentUser.id)
     : null;
 
-  // Only payer can edit/delete
-  const canEdit = currentUser && currentUser.id === expense.paidBy;
+  // Payer can edit/delete, creator can also edit (to assign items)
+  const isPayer = currentUser && currentUser.id === expense.paidBy;
+  const isCreator = currentUser && currentUser.id === expense.createdBy;
+  const canEdit = isPayer || isCreator;
+  const canDelete = isPayer; // Only payer can delete
 
   return (
     <div className={`bg-gray-800 rounded-lg shadow-sm border ${isSettlement ? 'border-green-700' : 'border-gray-700'} p-4 ${expenseDeleted ? 'opacity-60' : ''}`}>
@@ -67,7 +70,7 @@ export function ExpenseCard({
                 <span className="text-xs px-2 py-0.5 rounded-full bg-green-900 text-green-300">
                   Settlement
                 </span>
-                {canEdit && !expenseDeleted && (
+                {canDelete && !expenseDeleted && (
                   <button
                     onClick={onDelete}
                     className="text-red-400 text-xs hover:text-red-300"
@@ -453,7 +456,7 @@ export function ExpenseCard({
         </div>
       )}
 
-      {onDelete && canEdit && !isSettlement && !expenseDeleted && (
+      {onDelete && canDelete && !isSettlement && !expenseDeleted && (
         <div className="mt-3 pt-3 border-t border-gray-700">
           <button
             onClick={onDelete}

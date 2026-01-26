@@ -49,11 +49,11 @@ export function EditExpense() {
   // Calculate which members are included
   const includedMemberIds = new Set(items.filter(i => i.memberId).map(i => i.memberId!));
 
-  // Only payer can edit
-  const canEdit =
-    currentUser &&
-    expense &&
-    currentUser.id === expense.paidBy;
+  // Payer can fully edit, creator can only assign unassigned items
+  const isPayer = !!(currentUser && expense && currentUser.id === expense.paidBy);
+  const isCreator = !!(currentUser && expense && currentUser.id === expense.createdBy);
+  const canEdit = isPayer || isCreator;
+  const canOnlyAssign = isCreator && !isPayer; // Creator who is not payer can only assign
 
   // Calculate splits from items
   const calculateSplits = () => {
@@ -105,6 +105,12 @@ export function EditExpense() {
 
   const handleMemberTap = (memberId: string) => {
     if (selectedItemId) {
+      const selectedItem = items.find(i => i.id === selectedItemId);
+      // Creator can only assign to unassigned items
+      if (canOnlyAssign && selectedItem?.memberId) {
+        setSelectedItemId(null);
+        return;
+      }
       handleItemsChange(items.map(item =>
         item.id === selectedItemId ? { ...item, memberId } : item
       ));
@@ -114,6 +120,8 @@ export function EditExpense() {
 
     const isIncluded = includedMemberIds.has(memberId);
     if (isIncluded) {
+      // Creator cannot unassign items
+      if (canOnlyAssign) return;
       handleItemsChange(items.map(item =>
         item.memberId === memberId ? { ...item, memberId: undefined } : item
       ));
@@ -124,6 +132,8 @@ export function EditExpense() {
           item.id === unassignedItem.id ? { ...item, memberId } : item
         ));
       } else {
+        // Creator cannot add new items
+        if (canOnlyAssign) return;
         const newItem: ReceiptItem = {
           id: crypto.randomUUID(),
           description: '',
@@ -251,9 +261,15 @@ export function EditExpense() {
     <div className="pb-20">
       <h2 className="text-xl font-bold mb-6">Edit Transaction</h2>
 
-      <div className="bg-yellow-900/30 border border-yellow-700 text-yellow-200 px-4 py-3 rounded-lg mb-6 text-sm">
-        Changing amounts will require affected members to accept again.
-      </div>
+      {canOnlyAssign ? (
+        <div className="bg-blue-900/30 border border-blue-700 text-blue-200 px-4 py-3 rounded-lg mb-6 text-sm">
+          You can edit description and assign members to unassigned items.
+        </div>
+      ) : (
+        <div className="bg-yellow-900/30 border border-yellow-700 text-yellow-200 px-4 py-3 rounded-lg mb-6 text-sm">
+          Changing amounts will require affected members to accept again.
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
@@ -276,7 +292,8 @@ export function EditExpense() {
           <select
             value={paidBy}
             onChange={(e) => setPaidBy(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100"
+            disabled={canOnlyAssign}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 disabled:opacity-50"
           >
             <option value="">Select who paid</option>
             {group.members.map((member) => (
@@ -324,7 +341,7 @@ export function EditExpense() {
             <label className="block text-sm font-medium text-gray-300">
               Amounts
             </label>
-            {includedMemberIds.size > 0 && (
+            {!canOnlyAssign && includedMemberIds.size > 0 && (
               <button
                 type="button"
                 onClick={() => {
@@ -355,6 +372,7 @@ export function EditExpense() {
             payerId={paidBy}
             selectedItemId={selectedItemId}
             onItemSelect={handleItemSelect}
+            assignOnly={canOnlyAssign}
           />
         </div>
 

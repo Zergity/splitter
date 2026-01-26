@@ -12,9 +12,10 @@ interface ReceiptItemsProps {
   payerId?: string;
   selectedItemId?: string | null;
   onItemSelect?: (itemId: string) => void;
+  assignOnly?: boolean; // If true, can only assign members to unassigned items
 }
 
-export function ReceiptItems({ items, members, currency, totalAmount, onTotalChange, onChange, payerId, selectedItemId, onItemSelect }: ReceiptItemsProps) {
+export function ReceiptItems({ items, members, currency, totalAmount, onTotalChange, onChange, payerId, selectedItemId, onItemSelect, assignOnly = false }: ReceiptItemsProps) {
   const { currentUser } = useApp();
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
   const [dragOverAddButton, setDragOverAddButton] = useState(false);
@@ -36,6 +37,13 @@ export function ReceiptItems({ items, members, currency, totalAmount, onTotalCha
   const handleDrop = (e: React.DragEvent, itemId: string) => {
     e.preventDefault();
     const memberId = e.dataTransfer.getData('text/plain');
+    const item = items.find(i => i.id === itemId);
+
+    // In assignOnly mode, can only assign to unassigned items
+    if (assignOnly && item?.memberId) {
+      setDragOverItemId(null);
+      return;
+    }
 
     if (memberId) {
       onChange(items.map(item =>
@@ -58,6 +66,12 @@ export function ReceiptItems({ items, members, currency, totalAmount, onTotalCha
 
   const handleAddButtonDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    // Cannot add items in assignOnly mode
+    if (assignOnly) {
+      setDragOverAddButton(false);
+      return;
+    }
+
     const memberId = e.dataTransfer.getData('text/plain');
 
     if (memberId) {
@@ -151,7 +165,8 @@ export function ReceiptItems({ items, members, currency, totalAmount, onTotalCha
             onChange={(e) => handleTotalInputChange(e.target.value)}
             onFocus={handleTotalFocus}
             onBlur={handleTotalBlur}
-            className="w-16 bg-gray-700 border border-cyan-600 rounded px-2 py-1 text-right text-sm font-semibold text-cyan-100"
+            disabled={assignOnly}
+            className="w-16 bg-gray-700 border border-cyan-600 rounded px-2 py-1 text-right text-sm font-semibold text-cyan-100 disabled:opacity-50"
           />
           <span className="text-xs text-cyan-300">{currency}</span>
         </div>
@@ -184,11 +199,11 @@ export function ReceiptItems({ items, members, currency, totalAmount, onTotalCha
               {assignedMember ? (
                 <button
                   type="button"
-                  onClick={() => handleRemoveAssignment(item.id)}
-                  className={`px-2 py-1 text-white text-xs rounded-full hover:bg-red-500 truncate max-w-full transition-colors ${
+                  onClick={() => !assignOnly && handleRemoveAssignment(item.id)}
+                  className={`px-2 py-1 text-white text-xs rounded-full truncate max-w-full transition-colors ${
                     item.memberId === payerId ? 'bg-green-600' : 'bg-cyan-600'
-                  }`}
-                  title="Click to remove"
+                  } ${assignOnly ? 'cursor-default' : 'hover:bg-red-500'}`}
+                  title={assignOnly ? undefined : "Click to remove"}
                 >
                   {currentUser && assignedMember.id === currentUser.id ? 'You' : assignedMember.name}
                 </button>
@@ -214,7 +229,8 @@ export function ReceiptItems({ items, members, currency, totalAmount, onTotalCha
               value={item.description}
               onChange={(e) => handleDescriptionChange(item.id, e.target.value)}
               placeholder="Item description"
-              className="flex-1 min-w-0 bg-transparent border-none text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1"
+              disabled={assignOnly}
+              className="flex-1 min-w-0 bg-transparent border-none text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1 disabled:opacity-50"
             />
 
             {/* Amount - editable */}
@@ -226,42 +242,47 @@ export function ReceiptItems({ items, members, currency, totalAmount, onTotalCha
                 onChange={(e) => handleAmountChange(e.target.value)}
                 onFocus={() => handleAmountFocus(item.id, item.amount)}
                 onBlur={() => handleAmountBlur(item.id)}
-                className="w-16 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-right text-sm text-gray-100"
+                disabled={assignOnly}
+                className="w-16 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-right text-sm text-gray-100 disabled:opacity-50"
               />
               <span className="text-xs text-gray-400">{currency}</span>
             </div>
 
             {/* Remove button */}
-            <button
-              type="button"
-              onClick={() => handleRemoveItem(item.id)}
-              className="p-1 text-gray-500 hover:text-red-400"
-              title="Remove item"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </button>
+            {!assignOnly && (
+              <button
+                type="button"
+                onClick={() => handleRemoveItem(item.id)}
+                className="p-1 text-gray-500 hover:text-red-400"
+                title="Remove item"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            )}
           </div>
         );
       })}
 
 
       {/* Add item button - also a drop zone */}
-      <button
-        type="button"
-        onClick={handleAddItem}
-        onDragOver={handleAddButtonDragOver}
-        onDragLeave={handleAddButtonDragLeave}
-        onDrop={handleAddButtonDrop}
-        className={`w-full py-2 border-2 border-dashed rounded-lg text-sm transition-all ${
-          dragOverAddButton
-            ? 'border-cyan-500 bg-cyan-900/30 text-cyan-300'
-            : 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-300'
-        }`}
-      >
-        + Add item
-      </button>
+      {!assignOnly && (
+        <button
+          type="button"
+          onClick={handleAddItem}
+          onDragOver={handleAddButtonDragOver}
+          onDragLeave={handleAddButtonDragLeave}
+          onDrop={handleAddButtonDrop}
+          className={`w-full py-2 border-2 border-dashed rounded-lg text-sm transition-all ${
+            dragOverAddButton
+              ? 'border-cyan-500 bg-cyan-900/30 text-cyan-300'
+              : 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-300'
+          }`}
+        >
+          + Add item
+        </button>
+      )}
     </div>
   );
 }
