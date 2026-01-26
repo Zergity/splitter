@@ -24,6 +24,7 @@ export function PendingActions() {
 
   // Expenses where current user needs to sign off
   const toSignOff = expenses.filter((e) =>
+    !e.tags?.includes('deleted') &&
     e.splits.some((s) => s.memberId === currentUser.id && !s.signedOff)
   );
 
@@ -36,6 +37,7 @@ export function PendingActions() {
   // Expenses current user paid, waiting for others to sign
   const awaitingOthers = expenses.filter(
     (e) =>
+      !e.tags?.includes('deleted') &&
       e.paidBy === currentUser.id &&
       e.splits.some((s) => !s.signedOff && s.memberId !== currentUser.id)
   );
@@ -43,6 +45,7 @@ export function PendingActions() {
   // Incomplete expenses - current user is payer and has unassigned items
   const incomplete = expenses.filter(
     (e) =>
+      !e.tags?.includes('deleted') &&
       e.paidBy === currentUser.id &&
       e.items?.some((item) => !item.memberId)
   );

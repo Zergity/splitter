@@ -15,6 +15,7 @@ export function Dashboard() {
 
   const pendingForUser = currentUser
     ? expenses.filter((e) =>
+        !e.tags?.includes('deleted') &&
         e.splits.some(
           (s) => s.memberId === currentUser.id && !s.signedOff
         )
@@ -24,6 +25,7 @@ export function Dashboard() {
   const waitingForOthers = currentUser
     ? expenses.filter(
         (e) =>
+          !e.tags?.includes('deleted') &&
           e.paidBy === currentUser.id &&
           e.splits.some((s) => !s.signedOff && s.memberId !== currentUser.id)
       )
@@ -50,6 +52,7 @@ export function Dashboard() {
   const incomplete = currentUser
     ? expenses.filter(
         (e) =>
+          !e.tags?.includes('deleted') &&
           e.paidBy === currentUser.id &&
           e.items?.some((item) => !item.memberId)
       )
