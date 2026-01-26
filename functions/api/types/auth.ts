@@ -121,4 +121,4 @@ export const KV_KEYS = {
 
 // Constants
 export const CHALLENGE_TTL_SECONDS = 5 * 60; // 5 minutes
-export const SESSION_TTL_SECONDS = 60 * 60; // 1 hour
+export const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
