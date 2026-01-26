@@ -104,10 +104,11 @@ Return ONLY JSON in this format:
 {"items":[{"description":"item name","amount":"15.000","qty":2}],"merchant":"store name","total":"150.000"}
 
 Rules:
-- Extract each line item with: description, unit price (ĐG), quantity (SL)
-- amount = unit price (ĐG), NOT line total
+- Extract each line item with: description, unit price (ĐG, Đơn Giá), quantity (SL, Số lượng)
+- amount = unit price (ĐG or Đơn giá), NOT line total
 - qty = quantity (SL or Số Lượng), default 1 if not shown
-- Skip subtotals, tax, service fee, tips
+- discount = dicount rate (Chiết khấu, Khuyến mãi), the percentage value or negative numbers
+- amount/unit price should be reduced by discount if shown
 - Keep price format as string (e.g. "15.000")
 - JSON only, no other text`,
             max_tokens: 1024,
