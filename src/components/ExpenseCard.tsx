@@ -41,6 +41,9 @@ export function ExpenseCard({
   // Items stats for display
   const itemCount = expense.items?.length ?? 0;
   const unclaimedCount = expense.items?.filter((item) => !item.memberId).length ?? 0;
+  const unclaimedAmount = expense.items
+    ?.filter((item) => !item.memberId)
+    .reduce((sum, item) => sum + item.amount, 0) ?? 0;
 
   // For settlements, get the recipient (the person in splits)
   const recipient = isSettlement ? members.find((m) => m.id === expense.splits[0]?.memberId) : null;
@@ -260,25 +263,36 @@ export function ExpenseCard({
               className="cursor-pointer"
               onClick={() => setExpanded(true)}
             >
-              <div className="flex justify-between items-center text-sm">
-                <span className="flex items-center gap-2">
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      userSplit.signedOff ? 'bg-green-500' : 'bg-yellow-500'
-                    }`}
-                  />
-                  Your share
-                  {userSplit.signedOff && (
-                    <span className="text-xs text-green-400 font-medium">Accepted</span>
-                  )}
-                </span>
-                <span className="text-gray-400">
-                  {formatCurrency(userSplit.amount, currency)}
-                </span>
-              </div>
-              {expense.splits.length > 1 && (
+              {(() => {
+                // For payer, show only their assigned items amount (exclude unclaimed)
+                const isUserPayer = currentUser && currentUser.id === expense.paidBy;
+                const userDisplayAmount = isUserPayer && unclaimedAmount > 0
+                  ? userSplit.amount - unclaimedAmount
+                  : userSplit.amount;
+
+                return (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="flex items-center gap-2">
+                      <span
+                        className={`w-2 h-2 rounded-full ${
+                          userSplit.signedOff ? 'bg-green-500' : 'bg-yellow-500'
+                        }`}
+                      />
+                      Your share
+                      {userSplit.signedOff && (
+                        <span className="text-xs text-green-400 font-medium">Accepted</span>
+                      )}
+                    </span>
+                    <span className="text-gray-400">
+                      {formatCurrency(userDisplayAmount, currency)}
+                    </span>
+                  </div>
+                );
+              })()}
+              {(expense.splits.length > 1 || unclaimedAmount > 0) && (
                 <p className="text-xs text-cyan-400 mt-1">
-                  Tap to see all {expense.splits.length} participants
+                  Tap to see {expense.splits.length > 1 ? `all ${expense.splits.length} participants` : 'details'}
+                  {unclaimedAmount > 0 && ` (${formatCurrency(unclaimedAmount, currency)} unclaimed)`}
                 </p>
               )}
             </div>
@@ -314,31 +328,51 @@ export function ExpenseCard({
                 </p>
               </div>
               <div className="space-y-1">
-                {expense.splits.map((split) => (
-                  <div
-                    key={split.memberId}
-                    className={`flex justify-between items-center text-sm ${
-                      currentUser && split.memberId === currentUser.id ? 'font-medium' : ''
-                    }`}
-                  >
+                {expense.splits.map((split) => {
+                  // For payer, show only their assigned items amount (exclude unclaimed)
+                  const isPayer = split.memberId === expense.paidBy;
+                  const displayAmount = isPayer && unclaimedAmount > 0
+                    ? split.amount - unclaimedAmount
+                    : split.amount;
+
+                  return (
+                    <div
+                      key={split.memberId}
+                      className={`flex justify-between items-center text-sm ${
+                        currentUser && split.memberId === currentUser.id ? 'font-medium' : ''
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            split.signedOff ? 'bg-green-500' : 'bg-yellow-500'
+                          }`}
+                        />
+                        {currentUser && split.memberId === currentUser.id ? (
+                          <span className="text-cyan-400">You</span>
+                        ) : getMemberName(split.memberId)}
+                        {split.signedOff && (
+                          <span className="text-xs text-green-400 font-medium">Accepted</span>
+                        )}
+                      </span>
+                      <span className="text-gray-400">
+                        {formatCurrency(displayAmount, currency)}
+                      </span>
+                    </div>
+                  );
+                })}
+                {/* Show unclaimed amount separately */}
+                {unclaimedAmount > 0 && (
+                  <div className="flex justify-between items-center text-sm">
                     <span className="flex items-center gap-2">
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          split.signedOff ? 'bg-green-500' : 'bg-yellow-500'
-                        }`}
-                      />
-                      {currentUser && split.memberId === currentUser.id ? (
-                        <span className="text-cyan-400">You</span>
-                      ) : getMemberName(split.memberId)}
-                      {split.signedOff && (
-                        <span className="text-xs text-green-400 font-medium">Accepted</span>
-                      )}
+                      <span className="w-2 h-2 rounded-full bg-orange-500" />
+                      <span className="text-orange-400">Unclaimed</span>
                     </span>
-                    <span className="text-gray-400">
-                      {formatCurrency(split.amount, currency)}
+                    <span className="text-orange-400">
+                      {formatCurrency(unclaimedAmount, currency)}
                     </span>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           )}
