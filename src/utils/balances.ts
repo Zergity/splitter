@@ -22,43 +22,45 @@ export function calculateBalances(
   const activeExpenses = expenses.filter((e) => !isDeleted(e));
 
   activeExpenses.forEach((expense) => {
-    expense.splits.forEach((split) => {
-      const map = split.signedOff ? signedMap : pendingMap;
-      const currentBalance = map.get(split.memberId) || 0;
+    // Calculate unassigned amount from items - this goes to payer's PENDING balance
+    const unassignedAmount = expense.items
+      ? expense.items
+          .filter((item) => !item.memberId)
+          .reduce((sum, item) => sum + item.amount, 0)
+      : 0;
 
-      if (split.memberId === expense.paidBy) {
-        // Payer: gets credit for what they paid minus what they owe
-        map.set(
-          split.memberId,
-          currentBalance + expense.amount - split.amount
-        );
-      } else {
+    // First pass: calculate what each non-payer participant owes (their debt to payer)
+    // and accumulate payer's credit based on each participant's signedOff status
+    let payerSignedCredit = 0;
+    let payerPendingCredit = 0;
+
+    expense.splits.forEach((split) => {
+      if (split.memberId !== expense.paidBy) {
         // Participant: owes their split amount
+        const map = split.signedOff ? signedMap : pendingMap;
+        const currentBalance = map.get(split.memberId) || 0;
         map.set(split.memberId, currentBalance - split.amount);
+
+        // Payer gets credit for this - goes to signed or pending based on THIS participant's status
+        if (split.signedOff) {
+          payerSignedCredit += split.amount;
+        } else {
+          payerPendingCredit += split.amount;
+        }
       }
     });
 
-    // Handle case where payer is not in the splits
-    const payerInSplits = expense.splits.some(
-      (s) => s.memberId === expense.paidBy
-    );
-    if (!payerInSplits) {
-      // Split by signed status
-      const signedAmount = expense.splits
-        .filter((s) => s.signedOff)
-        .reduce((sum, s) => sum + s.amount, 0);
-      const pendingAmount = expense.splits
-        .filter((s) => !s.signedOff)
-        .reduce((sum, s) => sum + s.amount, 0);
+    // Payer's balance: credit from what others owe them + unassigned items
+    // Unassigned items go to PENDING balance (waiting to be claimed by someone)
+    const payerTotalPendingCredit = payerPendingCredit + unassignedAmount;
 
-      if (signedAmount > 0) {
-        const currentSigned = signedMap.get(expense.paidBy) || 0;
-        signedMap.set(expense.paidBy, currentSigned + signedAmount);
-      }
-      if (pendingAmount > 0) {
-        const currentPending = pendingMap.get(expense.paidBy) || 0;
-        pendingMap.set(expense.paidBy, currentPending + pendingAmount);
-      }
+    if (payerSignedCredit > 0) {
+      const currentSigned = signedMap.get(expense.paidBy) || 0;
+      signedMap.set(expense.paidBy, currentSigned + payerSignedCredit);
+    }
+    if (payerTotalPendingCredit > 0) {
+      const currentPending = pendingMap.get(expense.paidBy) || 0;
+      pendingMap.set(expense.paidBy, currentPending + payerTotalPendingCredit);
     }
   });
 
