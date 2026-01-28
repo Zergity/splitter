@@ -11,6 +11,7 @@ interface ExpenseCardProps {
   currency: string;
   showSignOff?: boolean;
   onDelete?: () => void;
+  initialExpanded?: boolean;
 }
 
 export function ExpenseCard({
@@ -19,9 +20,10 @@ export function ExpenseCard({
   currency,
   showSignOff = false,
   onDelete,
+  initialExpanded = false,
 }: ExpenseCardProps) {
   const { currentUser, updateExpense, claimExpenseItem } = useApp();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(initialExpanded);
   const [showReceipt, setShowReceipt] = useState(false);
   const [editingTags, setEditingTags] = useState(false);
   const [tagInput, setTagInput] = useState('');

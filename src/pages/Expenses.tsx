@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { ExpenseCard } from '../components/ExpenseCard';
 import { getDateKey, formatDateHeader, getTagColor, isDeleted } from '../utils/balances';
@@ -7,9 +7,21 @@ import { Expense, Member } from '../types';
 
 export function Expenses() {
   const { group, expenses, currentUser, deleteExpense } = useApp();
+  const [searchParams] = useSearchParams();
+  const expandId = searchParams.get('expand');
   const [filter, setFilter] = useState<'all' | 'mine' | 'deleted'>('all');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+
+  // Scroll to expanded expense on mount
+  useEffect(() => {
+    if (expandId) {
+      const element = document.getElementById(`expense-${expandId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [expandId]);
 
   if (!group) return null;
 
@@ -258,13 +270,18 @@ export function Expenses() {
                     ? expense.splits.some((s) => s.memberId === currentUser.id && !s.signedOff)
                     : false;
                   return (
-                    <div key={expense.id} className={deleting === expense.id ? 'opacity-50' : ''}>
+                    <div
+                      key={expense.id}
+                      id={`expense-${expense.id}`}
+                      className={deleting === expense.id ? 'opacity-50' : ''}
+                    >
                       <ExpenseCard
                         expense={expense}
                         members={group.members}
                         currency={group.currency}
                         showSignOff={canSignOff}
                         onDelete={() => handleDelete(expense)}
+                        initialExpanded={expense.id === expandId}
                       />
                     </div>
                   );

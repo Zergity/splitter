@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { calculateBalances } from '../utils/balances';
-import { formatCurrency } from '../utils/balances';
+import { calculateBalances, formatCurrency, formatRelativeTime } from '../utils/balances';
 
 export function Dashboard() {
   const { group, expenses, currentUser } = useApp();
@@ -179,9 +178,10 @@ export function Dashboard() {
               .map((expense) => {
                 const payer = group.members.find((m) => m.id === expense.paidBy);
                 return (
-                  <div
+                  <Link
                     key={expense.id}
-                    className="flex justify-between text-sm py-2 border-b border-gray-700 last:border-0"
+                    to={`/expenses?expand=${expense.id}`}
+                    className="flex justify-between text-sm py-2 border-b border-gray-700 last:border-0 hover:bg-gray-700/50 -mx-2 px-2 rounded"
                   >
                     <div>
                       <p className="font-medium">{expense.description}</p>
@@ -189,12 +189,14 @@ export function Dashboard() {
                         by {currentUser && payer?.id === currentUser.id ? (
                           <span className="text-cyan-400">You</span>
                         ) : (payer?.name || 'Unknown')}
+                        <span className="mx-1">•</span>
+                        {formatRelativeTime(expense.createdAt)}
                       </p>
                     </div>
                     <p className="font-medium">
                       {formatCurrency(expense.amount, group.currency)}
                     </p>
-                  </div>
+                  </Link>
                 );
               })}
           </div>
