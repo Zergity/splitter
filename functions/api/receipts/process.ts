@@ -102,13 +102,13 @@ export const onRequestPost: PagesFunction<ReceiptsEnv> = async (context) => {
             prompt: `Extract items from this receipt/bill.
 
 Return JSON:
-{"items":[{"description":"item name","amount":"15.000","qty":2}],"merchant":"store name","discount":10,"total":"150.000"}
+{"items":[{"description":"item name","amount":"15.000","qty":2}],"merchant":"store name","discount":0,"total":"150.000"}
 
 Rules:
 - description: item name
 - amount: UNIT PRICE (price per single item), NOT line total
 - qty: quantity, default 1
-- discount: discount PERCENTAGE as number (e.g., 10 for 10% off, 0 if no discount)
+- discount: discount PERCENTAGE as number ONLY if receipt shows a discount (e.g., 10 for 10% off). Use 0 if NO discount on receipt
 - total: final amount on bill
 - Keep price format as string
 - JSON only`,
