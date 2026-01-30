@@ -345,14 +345,12 @@ export function EditExpense() {
               <button
                 type="button"
                 onClick={() => {
-                  const selectedMembers = Array.from(includedMemberIds);
-                  if (selectedMembers.length === 0) return;
-                  const splitAmount = roundNumber(totalAmount / selectedMembers.length, 2);
-                  const newItems: ReceiptItem[] = selectedMembers.map(memberId => ({
-                    id: crypto.randomUUID(),
-                    description: '',
+                  // Split total equally among all existing items
+                  if (items.length === 0) return;
+                  const splitAmount = roundNumber(totalAmount / items.length, 2);
+                  const newItems = items.map(item => ({
+                    ...item,
                     amount: splitAmount,
-                    memberId,
                   }));
                   handleItemsChange(newItems);
                 }}
