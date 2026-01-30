@@ -118,6 +118,7 @@ export function Expenses() {
       const payer = getMemberName(expense.paidBy, group.members);
       const tags = expense.tags?.join(', ') || '';
 
+      // Export assigned splits
       expense.splits.forEach((split) => {
         const participant = getMemberName(split.memberId, group.members);
         const status = split.signedOff ? 'Accepted' : 'Pending';
@@ -131,6 +132,21 @@ export function Expenses() {
           participant,
           split.amount.toString(),
           status,
+          tags,
+        ]);
+      });
+
+      // Export unclaimed items with empty participant
+      expense.items?.filter(item => !item.memberId).forEach((item) => {
+        rows.push([
+          date,
+          item.description || expense.description,
+          expense.amount.toString(),
+          group.currency,
+          payer,
+          '', // Empty participant for unclaimed items
+          item.amount.toString(),
+          'Unclaimed',
           tags,
         ]);
       });
