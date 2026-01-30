@@ -396,7 +396,7 @@ export function AddExpense() {
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
                 >
-                  {isYou ? <span className="text-cyan-300">You</span> : member.name}
+                  {isYou ? <span className="text-yellow-400">[{member.name}]</span> : member.name}
                 </div>
               );
             })}

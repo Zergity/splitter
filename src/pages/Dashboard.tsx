@@ -187,7 +187,7 @@ export function Dashboard() {
                       <p className="font-medium">{expense.description}</p>
                       <p className="text-gray-400 text-xs">
                         by {currentUser && payer?.id === currentUser.id ? (
-                          <span className="text-cyan-400">You</span>
+                          <span className="text-yellow-400">[{payer?.name || 'Unknown'}]</span>
                         ) : (payer?.name || 'Unknown')}
                         <span className="mx-1">•</span>
                         {formatRelativeTime(expense.createdAt)}

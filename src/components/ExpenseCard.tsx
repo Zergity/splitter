@@ -51,8 +51,10 @@ export function ExpenseCard({
   const recipient = isSettlement ? members.find((m) => m.id === expense.splits[0]?.memberId) : null;
 
   const getMemberName = (id: string) => {
-    if (currentUser && id === currentUser.id) return 'You';
-    return members.find((m) => m.id === id)?.name || 'Unknown';
+    const member = members.find((m) => m.id === id);
+    const name = member?.name || 'Unknown';
+    if (currentUser && id === currentUser.id) return <>[{name}]</>;
+    return name;
   };
 
   const userSplit = currentUser
@@ -85,12 +87,12 @@ export function ExpenseCard({
                 )}
               </div>
               <p className="text-sm mt-2">
-                <span className={currentUser && payer?.id === currentUser.id ? 'text-cyan-400 font-medium' : 'text-gray-100'}>
-                  {currentUser && payer?.id === currentUser.id ? 'You' : (payer?.name || 'Unknown')}
+                <span className={currentUser && payer?.id === currentUser.id ? 'text-yellow-400 font-medium' : 'text-gray-100'}>
+                  {currentUser && payer?.id === currentUser.id ? `[${payer?.name || 'Unknown'}]` : (payer?.name || 'Unknown')}
                 </span>
                 <span className="text-gray-500 mx-2">paid</span>
-                <span className={currentUser && recipient?.id === currentUser.id ? 'text-cyan-400 font-medium' : 'text-gray-100'}>
-                  {currentUser && recipient?.id === currentUser.id ? 'You' : (recipient?.name || 'Unknown')}
+                <span className={currentUser && recipient?.id === currentUser.id ? 'text-yellow-400 font-medium' : 'text-gray-100'}>
+                  {currentUser && recipient?.id === currentUser.id ? `[${recipient?.name || 'Unknown'}]` : (recipient?.name || 'Unknown')}
                 </span>
               </p>
             </>
@@ -109,11 +111,11 @@ export function ExpenseCard({
               </div>
               <p className="text-sm text-gray-400">
                 Paid by {currentUser && payer?.id === currentUser.id ? (
-                  <span className="text-cyan-400">You</span>
+                  <span className="text-yellow-400">[{payer?.name || 'Unknown'}]</span>
                 ) : (payer?.name || 'Unknown')}
                 {creator && creator.id !== expense.paidBy && (
                   <span className="text-gray-500"> (added by {currentUser && creator.id === currentUser.id ? (
-                    <span className="text-cyan-400">You</span>
+                    <span className="text-yellow-400">[{creator.name}]</span>
                   ) : creator.name})</span>
                 )}
               </p>
@@ -252,7 +254,7 @@ export function ExpenseCard({
               <span className="text-green-400">Confirmed by recipient</span>
             ) : (
               <span className="text-yellow-400">
-                Awaiting confirmation from {recipient && currentUser && recipient.id === currentUser.id ? 'You' : (recipient?.name || 'recipient')}
+                Awaiting confirmation from {recipient && currentUser && recipient.id === currentUser.id ? `[${recipient?.name || 'recipient'}]` : (recipient?.name || 'recipient')}
               </span>
             )}
           </div>
@@ -350,9 +352,7 @@ export function ExpenseCard({
                             split.signedOff ? 'bg-green-500' : 'bg-yellow-500'
                           }`}
                         />
-                        {currentUser && split.memberId === currentUser.id ? (
-                          <span className="text-cyan-400">You</span>
-                        ) : getMemberName(split.memberId)}
+                        {getMemberName(split.memberId)}
                         {split.signedOff && (
                           <span className="text-xs text-green-400 font-medium">Accepted</span>
                         )}
@@ -425,7 +425,7 @@ export function ExpenseCard({
                         <div className="flex items-center gap-2 ml-2">
                           {isClaimedByMe ? (
                             <>
-                              <span className="text-cyan-400 text-xs">You</span>
+                              <span className="text-yellow-400 text-xs">[{assignedMember?.name}]</span>
                               <button
                                 onClick={async () => {
                                   setClaimingItemId(item.id);

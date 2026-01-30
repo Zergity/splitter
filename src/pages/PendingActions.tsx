@@ -153,8 +153,8 @@ export function PendingActions() {
               const pendingMembers = expense.splits
                 .filter((s) => !s.signedOff && s.memberId !== currentUser.id)
                 .map((s) => {
-                  if (s.memberId === currentUser.id) return 'You';
-                  return group.members.find((m) => m.id === s.memberId)?.name || 'Unknown';
+                  const member = group.members.find((m) => m.id === s.memberId);
+                  return member?.name || 'Unknown';
                 });
 
               return (

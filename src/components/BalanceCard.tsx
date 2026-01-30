@@ -41,13 +41,13 @@ export function BalanceCard({
   return (
     <div
       className={`p-4 rounded-lg border ${
-        isCurrentUser ? 'border-cyan-600 bg-cyan-900/30' : 'border-gray-700 bg-gray-800'
+        isCurrentUser ? 'border-yellow-500 bg-yellow-900/20' : 'border-gray-700 bg-gray-800'
       }`}
     >
       <div className="flex justify-between items-center">
         <span className="font-medium">
           {isCurrentUser ? (
-            <span className="text-cyan-400">You</span>
+            <span className="text-yellow-400">[{balance.memberName}]</span>
           ) : balance.memberName}
         </span>
         <div className="flex items-center gap-3">

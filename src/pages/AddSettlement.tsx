@@ -116,7 +116,7 @@ export function AddSettlement() {
             <option value="">Select payer</option>
             {group.members.map((member) => (
               <option key={member.id} value={member.id}>
-                {currentUser && member.id === currentUser.id ? 'You' : member.name}
+                {currentUser && member.id === currentUser.id ? `[${member.name}]` : member.name}
               </option>
             ))}
           </select>
@@ -136,7 +136,7 @@ export function AddSettlement() {
               .filter((m) => m.id !== fromMemberId)
               .map((member) => (
                 <option key={member.id} value={member.id}>
-                  {currentUser && member.id === currentUser.id ? 'You' : member.name}
+                  {currentUser && member.id === currentUser.id ? `[${member.name}]` : member.name}
                 </option>
               ))}
           </select>
@@ -165,12 +165,12 @@ export function AddSettlement() {
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
             <p className="text-sm text-gray-400 mb-2">Summary</p>
             <p className="text-lg">
-              <span className={currentUser && fromMember.id === currentUser.id ? 'text-cyan-400' : ''}>
-                {currentUser && fromMember.id === currentUser.id ? 'You' : fromMember.name}
+              <span className={currentUser && fromMember.id === currentUser.id ? 'text-yellow-400' : ''}>
+                {currentUser && fromMember.id === currentUser.id ? `[${fromMember.name}]` : fromMember.name}
               </span>
               <span className="text-gray-500 mx-2">pays</span>
-              <span className={currentUser && toMember.id === currentUser.id ? 'text-cyan-400' : ''}>
-                {currentUser && toMember.id === currentUser.id ? 'You' : toMember.name}
+              <span className={currentUser && toMember.id === currentUser.id ? 'text-yellow-400' : ''}>
+                {currentUser && toMember.id === currentUser.id ? `[${toMember.name}]` : toMember.name}
               </span>
               <span className="font-semibold ml-2">
                 {formatCurrency(parsedAmount, group.currency)}

@@ -205,7 +205,7 @@ export function ReceiptItems({ items, members, currency, totalAmount, onTotalCha
                   } ${assignOnly ? 'cursor-default' : 'hover:bg-red-500'}`}
                   title={assignOnly ? undefined : "Click to remove"}
                 >
-                  {currentUser && assignedMember.id === currentUser.id ? 'You' : assignedMember.name}
+                  {currentUser && assignedMember.id === currentUser.id ? `[${assignedMember.name}]` : assignedMember.name}
                 </button>
               ) : (
                 <button

@@ -209,7 +209,7 @@ export function SplitInput({
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
                 >
-                  {isYou ? <span className="text-cyan-300">You</span> : member.name}
+                  {isYou ? <span className="text-yellow-400">[{member.name}]</span> : member.name}
                 </button>
               );
             })}
@@ -262,7 +262,7 @@ export function SplitInput({
                 }`}
               >
                 <span className="flex-1 text-sm font-medium truncate">
-                  {isYou ? <span className="text-cyan-400">You</span> : member.name}
+                  {isYou ? <span className="text-yellow-400">[{member.name}]</span> : member.name}
                   {isPayer && <span className="text-cyan-400 ml-1">(payer)</span>}
                 </span>
                 <div className="flex items-center gap-1">
