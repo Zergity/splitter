@@ -349,7 +349,7 @@ export function ExpenseCard({
                           <span className={`w-2 h-2 rounded-full flex-shrink-0 ${split.signedOff ? 'bg-green-500' : 'bg-yellow-500'}`} />
                           <span className="flex-shrink-0">{getMemberName(split.memberId)}</span>
                           {split.signedOff && <span className="text-xs text-green-400">✓</span>}
-                          {singleItem.description && <span className="text-gray-500 truncate">· {singleItem.description}</span>}
+                          {singleItem.description && <span className="text-gray-500 truncate">{singleItem.description}</span>}
                           <span className="text-gray-400">({formatCurrency(singleItem.amount, currency)})</span>
                           {isMe && (
                             <button
@@ -410,7 +410,7 @@ export function ExpenseCard({
                       <div className="flex items-center gap-2 text-sm">
                         <span className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />
                         <span className="text-orange-400 flex-shrink-0">Unclaimed</span>
-                        {expense.items?.find(i => !i.memberId)?.description && <span className="text-gray-500 truncate">· {expense.items?.find(i => !i.memberId)?.description}</span>}
+                        {expense.items?.find(i => !i.memberId)?.description && <span className="text-gray-500 truncate">{expense.items?.find(i => !i.memberId)?.description}</span>}
                         <span className="text-orange-400">({formatCurrency(unclaimedAmount, currency)})</span>
                         {currentUser && (
                           <button
