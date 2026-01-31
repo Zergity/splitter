@@ -13,9 +13,10 @@ interface ReceiptItemsProps {
   selectedItemId?: string | null;
   onItemSelect?: (itemId: string) => void;
   assignOnly?: boolean; // If true, can only assign members to unassigned items
+  editableItemIds?: Set<string>; // If set, only these items can have their descriptions edited
 }
 
-export function ReceiptItems({ items, members, currency, totalAmount, onTotalChange, onChange, payerId, selectedItemId, onItemSelect, assignOnly = false }: ReceiptItemsProps) {
+export function ReceiptItems({ items, members, currency, totalAmount, onTotalChange, onChange, payerId, selectedItemId, onItemSelect, assignOnly = false, editableItemIds }: ReceiptItemsProps) {
   const { currentUser } = useApp();
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
   const [dragOverAddButton, setDragOverAddButton] = useState(false);
@@ -229,7 +230,7 @@ export function ReceiptItems({ items, members, currency, totalAmount, onTotalCha
               value={item.description}
               onChange={(e) => handleDescriptionChange(item.id, e.target.value)}
               placeholder="Item description"
-              disabled={assignOnly}
+              disabled={editableItemIds ? !editableItemIds.has(item.id) : assignOnly}
               className="flex-1 min-w-0 bg-transparent border-none text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1 disabled:opacity-50"
             />
 

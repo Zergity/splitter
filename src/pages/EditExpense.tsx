@@ -49,11 +49,13 @@ export function EditExpense() {
   // Calculate which members are included
   const includedMemberIds = new Set(items.filter(i => i.memberId).map(i => i.memberId!));
 
-  // Payer can fully edit, creator can only assign unassigned items
+  // Payer can fully edit, creator can only assign unassigned items, participant can edit own items
   const isPayer = !!(currentUser && expense && currentUser.id === expense.paidBy);
   const isCreator = !!(currentUser && expense && currentUser.id === expense.createdBy);
-  const canEdit = isPayer || isCreator;
+  const isParticipant = !!(currentUser && expense && expense.items?.some(item => item.memberId === currentUser.id));
+  const canEdit = isPayer || isCreator || isParticipant;
   const canOnlyAssign = isCreator && !isPayer; // Creator who is not payer can only assign
+  const canOnlyEditOwnItems = isParticipant && !isPayer && !isCreator; // Participant can only edit own item descriptions
 
   // Calculate splits from items
   const calculateSplits = () => {
@@ -259,9 +261,15 @@ export function EditExpense() {
 
   return (
     <div className="pb-20">
-      <h2 className="text-xl font-bold mb-6">Edit Transaction</h2>
+      <h2 className="text-xl font-bold mb-6">
+        Edit Transaction {isPayer ? '(as Payer)' : isCreator ? '(as Creator)' : '(as Participant)'}
+      </h2>
 
-      {canOnlyAssign ? (
+      {canOnlyEditOwnItems ? (
+        <div className="bg-blue-900/30 border border-blue-700 text-blue-200 px-4 py-3 rounded-lg mb-6 text-sm">
+          You can edit the description of your own items.
+        </div>
+      ) : canOnlyAssign ? (
         <div className="bg-blue-900/30 border border-blue-700 text-blue-200 px-4 py-3 rounded-lg mb-6 text-sm">
           You can edit description and assign members to unassigned items.
         </div>
@@ -281,7 +289,8 @@ export function EditExpense() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What was this transaction for?"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100"
+            disabled={canOnlyAssign || canOnlyEditOwnItems}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 disabled:opacity-50"
           />
         </div>
 
@@ -292,7 +301,7 @@ export function EditExpense() {
           <select
             value={paidBy}
             onChange={(e) => setPaidBy(e.target.value)}
-            disabled={canOnlyAssign}
+            disabled={canOnlyAssign || canOnlyEditOwnItems}
             className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 disabled:opacity-50"
           >
             <option value="">Select who paid</option>
@@ -305,35 +314,37 @@ export function EditExpense() {
         </div>
 
         {/* Split between - draggable members */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Split between
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {group.members.map((member) => {
-              const isIncluded = includedMemberIds.has(member.id);
-              const isYou = currentUser && member.id === currentUser.id;
-              return (
-                <div
-                  key={member.id}
-                  draggable
-                  onClick={() => handleMemberTap(member.id)}
-                  onDragStart={(e) => handleMemberDragStart(e, member.id)}
-                  className={`px-3 py-1.5 rounded-full text-sm cursor-grab active:cursor-grabbing select-none transition-colors ${
-                    isIncluded
-                      ? 'bg-cyan-600 text-white hover:bg-red-500'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  {isYou ? <span className="text-yellow-400">[{member.name}]</span> : member.name}
-                </div>
-              );
-            })}
+        {!canOnlyEditOwnItems && (
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Split between
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {group.members.map((member) => {
+                const isIncluded = includedMemberIds.has(member.id);
+                const isYou = currentUser && member.id === currentUser.id;
+                return (
+                  <div
+                    key={member.id}
+                    draggable
+                    onClick={() => handleMemberTap(member.id)}
+                    onDragStart={(e) => handleMemberDragStart(e, member.id)}
+                    className={`px-3 py-1.5 rounded-full text-sm cursor-grab active:cursor-grabbing select-none transition-colors ${
+                      isIncluded
+                        ? 'bg-cyan-600 text-white hover:bg-red-500'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    {isYou ? <span className="text-yellow-400">[{member.name}]</span> : member.name}
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Tap item then tap member, or drag member to item
+            </p>
           </div>
-          <p className="text-xs text-gray-500 mt-2">
-            Tap item then tap member, or drag member to item
-          </p>
-        </div>
+        )}
 
         {/* Amounts section */}
         <div>
@@ -341,7 +352,7 @@ export function EditExpense() {
             <label className="block text-sm font-medium text-gray-300">
               Amounts
             </label>
-            {!canOnlyAssign && includedMemberIds.size > 0 && (
+            {!canOnlyAssign && !canOnlyEditOwnItems && includedMemberIds.size > 0 && (
               <button
                 type="button"
                 onClick={() => {
@@ -370,7 +381,8 @@ export function EditExpense() {
             payerId={paidBy}
             selectedItemId={selectedItemId}
             onItemSelect={handleItemSelect}
-            assignOnly={canOnlyAssign}
+            assignOnly={canOnlyAssign || canOnlyEditOwnItems}
+            editableItemIds={canOnlyEditOwnItems ? new Set(items.filter(i => i.memberId === currentUser?.id).map(i => i.id)) : undefined}
           />
         </div>
 

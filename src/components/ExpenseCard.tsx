@@ -64,7 +64,8 @@ export function ExpenseCard({
   // Payer can edit/delete, creator can also edit (to assign items)
   const isPayer = currentUser && currentUser.id === expense.paidBy;
   const isCreator = currentUser && currentUser.id === expense.createdBy;
-  const canEdit = isPayer || isCreator;
+  const isParticipant = currentUser && expense.items?.some(item => item.memberId === currentUser.id);
+  const canEdit = isPayer || isCreator || isParticipant;
   const canDelete = isPayer; // Only payer can delete
 
   return (
@@ -105,7 +106,7 @@ export function ExpenseCard({
                     to={`/edit/${expense.id}`}
                     className="text-cyan-400 text-xs hover:text-cyan-300"
                   >
-                    Edit
+                    {isPayer ? 'Edit as Payer' : isCreator ? 'Edit as Creator' : 'Edit as Participant'}
                   </Link>
                 )}
               </div>
