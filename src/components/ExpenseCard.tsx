@@ -40,7 +40,6 @@ export function ExpenseCard({
   const hasUnassignedItems = expense.items?.some((item) => !item.memberId) ?? false;
 
   // Items stats for display
-  const itemCount = expense.items?.length ?? 0;
   const unclaimedCount = expense.items?.filter((item) => !item.memberId).length ?? 0;
   const unclaimedAmount = expense.items
     ?.filter((item) => !item.memberId)
