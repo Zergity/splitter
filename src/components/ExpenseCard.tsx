@@ -28,7 +28,6 @@ export function ExpenseCard({
   const [editingTags, setEditingTags] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [savingTags, setSavingTags] = useState(false);
-  const [showItems, setShowItems] = useState(false);
   const [claimingItemId, setClaimingItemId] = useState<string | null>(null);
 
   const payer = members.find((m) => m.id === expense.paidBy);
@@ -318,7 +317,7 @@ export function ExpenseCard({
             </div>
           )}
 
-          {/* Expanded view: show all splits */}
+          {/* Expanded view: unified participants + items */}
           {expanded && (
             <div>
               <div
@@ -334,139 +333,155 @@ export function ExpenseCard({
               </div>
               <div className="space-y-1">
                 {expense.splits.map((split) => {
-                  // For payer, show only their assigned items amount (exclude unclaimed)
                   const isPayer = split.memberId === expense.paidBy;
+                  const memberItems = expense.items?.filter(item => item.memberId === split.memberId) || [];
                   const displayAmount = isPayer && unclaimedAmount > 0
                     ? split.amount - unclaimedAmount
                     : split.amount;
+                  const isMe = currentUser && split.memberId === currentUser.id;
+                  const hasMultipleItems = memberItems.length > 1;
+                  const singleItem = memberItems.length === 1 ? memberItems[0] : null;
 
                   return (
-                    <div
-                      key={split.memberId}
-                      className={`flex justify-between items-center text-sm ${
-                        currentUser && split.memberId === currentUser.id ? 'font-medium' : ''
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span
-                          className={`w-2 h-2 rounded-full ${
-                            split.signedOff ? 'bg-green-500' : 'bg-yellow-500'
-                          }`}
-                        />
-                        {getMemberName(split.memberId)}
-                        {split.signedOff && (
-                          <span className="text-xs text-green-400 font-medium">Accepted</span>
-                        )}
-                      </span>
-                      <span className="text-gray-400">
-                        {formatCurrency(displayAmount, currency)}
-                      </span>
+                    <div key={split.memberId} className={isMe ? 'font-medium' : ''}>
+                      {/* Single item: compact inline view */}
+                      {singleItem ? (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${split.signedOff ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                          <span className="flex-shrink-0">{getMemberName(split.memberId)}</span>
+                          {split.signedOff && <span className="text-xs text-green-400">✓</span>}
+                          <span className="text-gray-500 truncate">· {singleItem.description || '-'}</span>
+                          <span className="text-gray-400">({formatCurrency(singleItem.amount, currency)})</span>
+                          {isMe && (
+                            <button
+                              onClick={async () => {
+                                setClaimingItemId(singleItem.id);
+                                await claimExpenseItem(expense.id, singleItem.id, false);
+                                setClaimingItemId(null);
+                              }}
+                              disabled={claimingItemId === singleItem.id}
+                              className="text-xs px-1.5 py-0.5 rounded bg-gray-600 text-gray-300 hover:bg-gray-500 disabled:opacity-50 flex-shrink-0"
+                            >
+                              {claimingItemId === singleItem.id ? '...' : '×'}
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        /* Multiple items or no items: header + nested */
+                        <>
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${split.signedOff ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                            <span>{getMemberName(split.memberId)}</span>
+                            {split.signedOff && <span className="text-xs text-green-400">✓</span>}
+                            <span className="text-gray-300">{formatCurrency(displayAmount, currency)}</span>
+                          </div>
+                          {hasMultipleItems && (
+                            <div className="ml-4 space-y-0.5">
+                              {memberItems.map((item) => (
+                                <div key={item.id} className="flex items-center gap-2 text-xs text-gray-400">
+                                  <span className="truncate">{item.description || '-'}</span>
+                                  <span>({formatCurrency(item.amount, currency)})</span>
+                                  {isMe && (
+                                    <button
+                                      onClick={async () => {
+                                        setClaimingItemId(item.id);
+                                        await claimExpenseItem(expense.id, item.id, false);
+                                        setClaimingItemId(null);
+                                      }}
+                                      disabled={claimingItemId === item.id}
+                                      className="px-1 rounded bg-gray-600 text-gray-300 hover:bg-gray-500 disabled:opacity-50 flex-shrink-0"
+                                    >
+                                      {claimingItemId === item.id ? '..' : '×'}
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   );
                 })}
-                {/* Show unclaimed amount separately */}
-                {unclaimedAmount > 0 && (
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-orange-500" />
-                      <span className="text-orange-400">Unclaimed</span>
-                    </span>
-                    <span className="text-orange-400">
-                      {formatCurrency(unclaimedAmount, currency)}
-                    </span>
+                {/* Unclaimed items */}
+                {unclaimedCount > 0 && (
+                  <div>
+                    {unclaimedCount === 1 ? (
+                      /* Single unclaimed: compact */
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />
+                        <span className="text-orange-400 flex-shrink-0">Unclaimed</span>
+                        <span className="text-gray-500 truncate">· {expense.items?.find(i => !i.memberId)?.description || '-'}</span>
+                        <span className="text-orange-400">({formatCurrency(unclaimedAmount, currency)})</span>
+                        {currentUser && (
+                          <button
+                            onClick={async () => {
+                              const item = expense.items?.find(i => !i.memberId);
+                              if (item) {
+                                setClaimingItemId(item.id);
+                                await claimExpenseItem(expense.id, item.id, true);
+                                setClaimingItemId(null);
+                              }
+                            }}
+                            disabled={!!claimingItemId}
+                            className="text-xs px-1.5 py-0.5 rounded bg-cyan-700 text-cyan-100 hover:bg-cyan-600 disabled:opacity-50 flex-shrink-0"
+                          >
+                            Claim
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      /* Multiple unclaimed: header + nested */
+                      <>
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />
+                          <span className="text-orange-400">Unclaimed</span>
+                          <span className="text-orange-300">{formatCurrency(unclaimedAmount, currency)}</span>
+                        </div>
+                        <div className="ml-4 mt-1 space-y-1">
+                          {expense.items?.filter(item => !item.memberId).map((item) => {
+                            const isClaiming = claimingItemId === item.id;
+                            return (
+                              <div
+                                key={item.id}
+                                className="flex items-center gap-2 text-xs text-gray-400"
+                              >
+                                <span className="truncate">{item.description || '-'}</span>
+                                <span>({formatCurrency(item.amount, currency)})</span>
+                                {currentUser && (
+                                  <button
+                                    onClick={async () => {
+                                      setClaimingItemId(item.id);
+                                      await claimExpenseItem(expense.id, item.id, true);
+                                      setClaimingItemId(null);
+                                    }}
+                                    disabled={isClaiming}
+                                    className="text-xs px-1.5 py-0.5 rounded bg-cyan-700 text-cyan-100 hover:bg-cyan-600 disabled:opacity-50"
+                                  >
+                                    {isClaiming ? '...' : 'Claim'}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* Items section - only show if expense has items */}
-          {itemCount > 0 && (
-            <div className="mt-3 pt-3 border-t border-gray-700">
+          {/* Collapsed items indicator - only when not expanded and has unclaimed */}
+          {!expanded && unclaimedCount > 0 && (
+            <div className="mt-2 pt-2 border-t border-gray-700">
               <button
-                onClick={() => setShowItems(!showItems)}
-                className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-300 w-full"
+                onClick={() => setExpanded(true)}
+                className="text-xs text-orange-400 hover:text-orange-300"
               >
-                <span className={`transition-transform ${showItems ? 'rotate-90' : ''}`}>
-                  ▶
-                </span>
-                <span>
-                  {itemCount} item{itemCount !== 1 ? 's' : ''}
-                  {unclaimedCount > 0 && (
-                    <span className="text-orange-400 ml-1">
-                      ({unclaimedCount} unclaimed)
-                    </span>
-                  )}
-                </span>
+                {unclaimedCount} unclaimed item{unclaimedCount !== 1 ? 's' : ''} - tap to view
               </button>
-
-              {showItems && (
-                <div className="mt-2 space-y-2">
-                  {expense.items?.map((item) => {
-                    const assignedMember = item.memberId
-                      ? members.find((m) => m.id === item.memberId)
-                      : null;
-                    const isClaimedByMe = currentUser && item.memberId === currentUser.id;
-                    const isUnclaimed = !item.memberId;
-                    const isClaiming = claimingItemId === item.id;
-
-                    return (
-                      <div
-                        key={item.id}
-                        className="flex items-center justify-between text-sm bg-gray-700/50 rounded px-3 py-2"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <span className="text-gray-200 truncate block">
-                            {item.description}
-                          </span>
-                          <span className="text-gray-400 text-xs">
-                            {formatCurrency(item.amount, currency)}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 ml-2">
-                          {isClaimedByMe ? (
-                            <>
-                              <span className="text-yellow-400 text-xs">[{assignedMember?.name}]</span>
-                              <button
-                                onClick={async () => {
-                                  setClaimingItemId(item.id);
-                                  await claimExpenseItem(expense.id, item.id, false);
-                                  setClaimingItemId(null);
-                                }}
-                                disabled={isClaiming}
-                                className="text-xs px-2 py-1 rounded bg-gray-600 text-gray-300 hover:bg-gray-500 disabled:opacity-50"
-                              >
-                                {isClaiming ? '...' : 'Unclaim'}
-                              </button>
-                            </>
-                          ) : isUnclaimed ? (
-                            <>
-                              <span className="text-orange-400 text-xs">Unclaimed</span>
-                              {currentUser && (
-                                <button
-                                  onClick={async () => {
-                                    setClaimingItemId(item.id);
-                                    await claimExpenseItem(expense.id, item.id, true);
-                                    setClaimingItemId(null);
-                                  }}
-                                  disabled={isClaiming}
-                                  className="text-xs px-2 py-1 rounded bg-cyan-700 text-cyan-100 hover:bg-cyan-600 disabled:opacity-50"
-                                >
-                                  {isClaiming ? '...' : 'Claim'}
-                                </button>
-                              )}
-                            </>
-                          ) : (
-                            <span className="text-gray-400 text-xs">
-                              {assignedMember?.name || 'Unknown'}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
             </div>
           )}
         </div>
