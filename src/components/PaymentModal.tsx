@@ -25,7 +25,9 @@ export function PaymentModal({
 
   const generateQrUrl = useCallback(() => {
     const description = `Settlement: ${payer.name} → ${recipient.name}`;
-    return `https://img.vietqr.io/image/${recipient.bankId}-${recipient.accountNo}-compact2.jpg?amount=${amount}&addInfo=${encodeURIComponent(description)}&accountName=${encodeURIComponent(recipient.accountName!)}`;
+    // Convert K to VND (1K = 1000 VND) for bank API
+    const amountInVND = Math.round(amount * 1000);
+    return `https://img.vietqr.io/image/${recipient.bankId}-${recipient.accountNo}-compact2.jpg?amount=${amountInVND}&addInfo=${encodeURIComponent(description)}&accountName=${encodeURIComponent(recipient.accountName!)}`;
   }, [recipient.bankId, recipient.accountNo, recipient.accountName, payer.name, recipient.name, amount]);
 
   // Generate QR URL when modal opens, reset when it closes
@@ -66,7 +68,9 @@ export function PaymentModal({
 
     const description = `Settlement: ${payer.name} → ${recipient.name}`;
     const bankAccount = `${recipient.accountNo}@${recipient.bankShortName.toLowerCase()}`;
-    const deeplink = `https://dl.vietqr.io/pay?app=${bankAppCode}&ba=${bankAccount}&am=${amount}&tn=${encodeURIComponent(description)}&bn=${encodeURIComponent(recipient.accountName)}`;
+    // Convert K to VND (1K = 1000 VND) for bank API
+    const amountInVND = Math.round(amount * 1000);
+    const deeplink = `https://dl.vietqr.io/pay?app=${bankAppCode}&ba=${bankAccount}&am=${amountInVND}&tn=${encodeURIComponent(description)}&bn=${encodeURIComponent(recipient.accountName)}`;
 
     window.location.href = deeplink;
   };
