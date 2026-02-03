@@ -1,14 +1,10 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { BalanceCard } from '../components/BalanceCard';
 import { calculateBalances, calculateSettlements, formatCurrency } from '../utils/balances';
-import { PaymentModal } from '../components/PaymentModal';
-import { Settlement } from '../types';
 
 export function Balances() {
   const { group, expenses, currentUser } = useApp();
-  const [paymentModal, setPaymentModal] = useState<Settlement | null>(null);
 
   if (!group) return null;
 
@@ -16,19 +12,6 @@ export function Balances() {
   const settlements = calculateSettlements(balances);
 
   const sortedBalances = [...balances].sort((a, b) => b.signedBalance - a.signedBalance);
-
-  const handleBankTransfer = (settlement: Settlement) => {
-    setPaymentModal(settlement);
-  };
-
-  const handleClosePaymentModal = () => {
-    setPaymentModal(null);
-  };
-
-  const hasBankAccountInfo = (memberId: string): boolean => {
-    const member = group?.members.find(m => m.id === memberId);
-    return !!(member?.bankId && member?.accountNo && member?.accountName);
-  };
 
   return (
     <div className="pb-20 space-y-8">
@@ -101,22 +84,12 @@ export function Balances() {
                   <span className="font-semibold">
                     {formatCurrency(settlement.amount, group.currency)}
                   </span>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => handleBankTransfer(settlement)}
-                      disabled={!hasBankAccountInfo(settlement.to)}
-                      className="text-sm bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={!hasBankAccountInfo(settlement.to) ? "Recipient hasn't set up bank account" : "Pay via bank transfer"}
-                    >
-                      Bank Transfer
-                    </button>
-                    <Link
-                      to={`/settle?from=${settlement.from}&to=${settlement.to}&amount=${settlement.amount}`}
-                      className="text-sm bg-cyan-600 text-white px-3 py-1 rounded hover:bg-cyan-700"
-                    >
-                      Settle
-                    </Link>
-                  </div>
+                  <Link
+                    to={`/settle?from=${settlement.from}&to=${settlement.to}&amount=${settlement.amount}`}
+                    className="text-sm bg-cyan-600 text-white px-3 py-1 rounded hover:bg-cyan-700"
+                  >
+                    Settle
+                  </Link>
                 </div>
               </div>
             ))}
@@ -136,27 +109,6 @@ export function Balances() {
           <li>Recipients must confirm settlements received</li>
         </ul>
       </section>
-
-      {/* Payment Modal */}
-      {paymentModal && currentUser && (() => {
-        const recipient = group.members.find(m => m.id === paymentModal.to);
-        const payer = group.members.find(m => m.id === paymentModal.from);
-
-        if (!recipient || !payer) {
-          return null;
-        }
-
-        return (
-          <PaymentModal
-            isOpen={true}
-            recipient={recipient}
-            payer={payer}
-            amount={paymentModal.amount}
-            currency={group.currency}
-            onClose={handleClosePaymentModal}
-          />
-        );
-      })()}
     </div>
   );
 }
