@@ -5,6 +5,23 @@
 
 BASE_URL="http://localhost:8788"
 
+# Cross-platform date function for relative dates
+# Usage: relative_date <days_ago>
+relative_date() {
+  local days_ago=$1
+  if date -v -1d > /dev/null 2>&1; then
+    # macOS
+    date -u -v-${days_ago}d +"%Y-%m-%dT%H:%M:%S.000Z"
+  else
+    # Linux (GNU date)
+    date -u -d "${days_ago} days ago" +"%Y-%m-%dT%H:%M:%S.000Z"
+  fi
+}
+
+NOW=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+TWO_DAYS_AGO=$(relative_date 2)
+ONE_DAY_AGO=$(relative_date 1)
+
 echo "🚀 Setting up development data..."
 echo ""
 
@@ -49,7 +66,7 @@ GROUP_DATA='{
       "name": "Charlie"
     }
   ],
-  "createdAt": "'$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")'"
+  "createdAt": "'"$NOW"'"
 }'
 
 curl -s -X PUT "$BASE_URL/api/group" \
@@ -79,14 +96,14 @@ EXPENSE1='{
       "value": 100000,
       "amount": 100000,
       "signedOff": true,
-      "signedAt": "'$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")'"
+      "signedAt": "'"$NOW"'"
     },
     {
       "memberId": "user-2",
       "value": 100000,
       "amount": 100000,
       "signedOff": true,
-      "signedAt": "'$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")'"
+      "signedAt": "'"$NOW"'"
     },
     {
       "memberId": "user-3",
@@ -95,7 +112,7 @@ EXPENSE1='{
       "signedOff": false
     }
   ],
-  "createdAt": "'$(date -u -v-2d +"%Y-%m-%dT%H:%M:%S.000Z" 2>/dev/null || date -u -d '2 days ago' +"%Y-%m-%dT%H:%M:%S.000Z")'"
+  "createdAt": "'"$TWO_DAYS_AGO"'"
 }'
 
 curl -s -X POST "$BASE_URL/api/expenses" \
@@ -124,17 +141,17 @@ EXPENSE2='{
       "value": 50000,
       "amount": 50000,
       "signedOff": true,
-      "signedAt": "'$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")'"
+      "signedAt": "'"$NOW"'"
     },
     {
       "memberId": "user-3",
       "value": 50000,
       "amount": 50000,
       "signedOff": true,
-      "signedAt": "'$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")'"
+      "signedAt": "'"$NOW"'"
     }
   ],
-  "createdAt": "'$(date -u -v-1d +"%Y-%m-%dT%H:%M:%S.000Z" 2>/dev/null || date -u -d '1 day ago' +"%Y-%m-%dT%H:%M:%S.000Z")'"
+  "createdAt": "'"$ONE_DAY_AGO"'"
 }'
 
 curl -s -X POST "$BASE_URL/api/expenses" \
@@ -157,17 +174,17 @@ EXPENSE3='{
       "value": 40000,
       "amount": 40000,
       "signedOff": true,
-      "signedAt": "'$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")'"
+      "signedAt": "'"$NOW"'"
     },
     {
       "memberId": "user-3",
       "value": 40000,
       "amount": 40000,
       "signedOff": true,
-      "signedAt": "'$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")'"
+      "signedAt": "'"$NOW"'"
     }
   ],
-  "createdAt": "'$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")'"
+  "createdAt": "'"$NOW"'"
 }'
 
 curl -s -X POST "$BASE_URL/api/expenses" \

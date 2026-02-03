@@ -105,9 +105,10 @@ export const onRequestPut: PagesFunction<AuthEnv> = async (context) => {
     }
 
     // Update the member's name and bank account
+    let updatedMember: typeof group.members[0] | null = null;
     const updatedMembers = group.members.map(m => {
       if (m.id === session.memberId) {
-        return {
+        updatedMember = {
           ...m,
           name: trimmedName,
           ...(bankId !== undefined && { bankId }),
@@ -116,6 +117,7 @@ export const onRequestPut: PagesFunction<AuthEnv> = async (context) => {
           ...(accountName !== undefined && { accountName }),
           ...(accountNo !== undefined && { accountNo }),
         };
+        return updatedMember;
       }
       return m;
     });
@@ -124,7 +126,7 @@ export const onRequestPut: PagesFunction<AuthEnv> = async (context) => {
     await context.env.SPLITTER_KV.put('group', JSON.stringify(updatedGroup));
 
     // Create new session with updated name
-    const { session: newSession, token: newToken } = await createSession(
+    const { token: newToken } = await createSession(
       context.env,
       session.memberId,
       trimmedName
@@ -133,14 +135,7 @@ export const onRequestPut: PagesFunction<AuthEnv> = async (context) => {
     return new Response(
       JSON.stringify({
         success: true,
-        data: {
-          member: { id: session.memberId, name: trimmedName },
-          session: {
-            memberId: newSession.memberId,
-            memberName: newSession.memberName,
-            expiresAt: newSession.expiresAt,
-          },
-        },
+        data: updatedMember,
       }),
       {
         headers: {

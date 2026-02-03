@@ -1,5 +1,10 @@
 import type { Bank } from '../types';
 
+/**
+ * Curated list of popular Vietnamese banks for VietQR integration.
+ * This is a subset of banks supported by VietQR. For the full list,
+ * see: https://api.vietqr.io/v2/banks
+ */
 export const BANKS: Bank[] = [
   {
     id: "970436",
@@ -67,8 +72,8 @@ export const BANKS: Bank[] = [
   {
     id: "970403",
     name: "Sacombank",
-    shortName: "SCB",
+    shortName: "STB",
     appCode: "sacombank",
-    logo: "https://api.vietqr.io/img/SCB.png"
+    logo: "https://api.vietqr.io/img/STB.png"
   }
 ];

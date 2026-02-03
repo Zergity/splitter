@@ -20,37 +20,44 @@ export function PaymentModal({
   onClose,
 }: PaymentModalProps) {
   const [qrUrl, setQrUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const generateQR = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const description = `Settlement: ${payer.name} → ${recipient.name}`;
-      const url = `https://img.vietqr.io/image/${recipient.bankId}-${recipient.accountNo}-compact2.jpg?amount=${amount}&addInfo=${encodeURIComponent(description)}&accountName=${encodeURIComponent(recipient.accountName!)}`;
-
-      // Test if URL is accessible
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error('Unable to generate QR code');
-      }
-
-      setQrUrl(url);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate QR code');
-    } finally {
-      setLoading(false);
-    }
+  const generateQrUrl = useCallback(() => {
+    const description = `Settlement: ${payer.name} → ${recipient.name}`;
+    return `https://img.vietqr.io/image/${recipient.bankId}-${recipient.accountNo}-compact2.jpg?amount=${amount}&addInfo=${encodeURIComponent(description)}&accountName=${encodeURIComponent(recipient.accountName!)}`;
   }, [recipient.bankId, recipient.accountNo, recipient.accountName, payer.name, recipient.name, amount]);
 
-  // Generate QR code when modal opens
+  // Generate QR URL when modal opens, reset when it closes
   useEffect(() => {
     if (isOpen && recipient.bankId && recipient.accountNo && recipient.accountName) {
-      generateQR();
+      setLoading(true);
+      setError(null);
+      setQrUrl(generateQrUrl());
+    } else {
+      // Cleanup when modal closes
+      setQrUrl(null);
+      setError(null);
+      setLoading(true);
     }
-  }, [isOpen, recipient.bankId, recipient.accountNo, recipient.accountName, generateQR]);
+  }, [isOpen, recipient.bankId, recipient.accountNo, recipient.accountName, generateQrUrl]);
+
+  const handleImageLoad = () => {
+    setLoading(false);
+    setError(null);
+  };
+
+  const handleImageError = () => {
+    setLoading(false);
+    setError('Unable to generate QR code. Please try again or use the banking app buttons below.');
+  };
+
+  const handleRetry = () => {
+    setLoading(true);
+    setError(null);
+    // Force re-render by updating URL with timestamp
+    setQrUrl(`${generateQrUrl()}&t=${Date.now()}`);
+  };
 
   const handleBankAppClick = (bankAppCode: string) => {
     if (!recipient.accountNo || !recipient.bankShortName || !recipient.accountName) {
@@ -98,17 +105,11 @@ export function PaymentModal({
           </div>
 
           {/* QR Code Section */}
-          {loading && (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-4 border-gray-600 border-t-cyan-600"></div>
-            </div>
-          )}
-
           {error && (
             <div className="mb-6 bg-red-900/30 border border-red-700 rounded-lg p-4">
               <p className="text-sm text-red-300">{error}</p>
               <button
-                onClick={generateQR}
+                onClick={handleRetry}
                 className="mt-2 text-sm text-cyan-400 hover:text-cyan-300"
               >
                 Try again
@@ -116,13 +117,21 @@ export function PaymentModal({
             </div>
           )}
 
-          {qrUrl && !loading && (
-            
-              <div className="flex justify-center bg-white p-4 rounded">
-                <img src={qrUrl} alt="Payment QR Code" className="max-w-full h-auto" />
-              </div>
-              
-            
+          {qrUrl && (
+            <div className="flex justify-center bg-white p-4 rounded mb-6">
+              <img
+                src={qrUrl}
+                alt="Payment QR Code"
+                className={`max-w-full h-auto ${loading ? 'hidden' : ''}`}
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+              />
+              {loading && !error && (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-gray-600 border-t-cyan-600"></div>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Divider */}
