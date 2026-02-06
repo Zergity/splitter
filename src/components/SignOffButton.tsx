@@ -54,7 +54,7 @@ export function SignOffButton({
     <button
       onClick={handleSignOff}
       disabled={loading}
-      className={`text-white rounded-lg font-medium disabled:opacity-50 ${sizeClass} ${colorClass}`}
+      className={`text-white rounded-lg font-medium disabled:opacity-50 ${sizeClass} ${colorClass} ${isForceSignOff ? 'flex-shrink-0 whitespace-nowrap cursor-pointer' : ''}`}
     >
       {buttonText}
     </button>
