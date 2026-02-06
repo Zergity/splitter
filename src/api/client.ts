@@ -113,8 +113,9 @@ export function canForceSignOff(expense: Expense, memberId: string): boolean {
 
   // Must be >=7 days old
   const createdAt = new Date(expense.createdAt);
+  if (isNaN(createdAt.getTime())) return false;
   const now = new Date();
-  const daysPassed = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
+  const daysPassed = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
 
   // Must NOT be a settlement
   if (expense.splitType === 'settlement') return false;
@@ -124,9 +125,9 @@ export function canForceSignOff(expense: Expense, memberId: string): boolean {
 
 // Check if expense has any unsigned participants (excluding optional memberId)
 export function hasUnsignedParticipants(expense: Expense, excludeMemberId?: string): boolean {
-  return expense.splits.some(
+  return expense.splits?.some(
     split => !split.signedOff && split.memberId !== excludeMemberId
-  );
+  ) ?? false;
 }
 
 // Sign-off helper
