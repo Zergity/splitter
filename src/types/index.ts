@@ -38,6 +38,7 @@ export interface ExpenseSplit {
   amount: number; // calculated actual amount
   signedOff: boolean;
   signedAt?: string;
+  signedBy?: string;  // NEW: tracks who performed the sign-off (self vs. forced)
   previousAmount?: number; // stored when amount changes and needs re-sign-off
 }
 
