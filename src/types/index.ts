@@ -2,6 +2,21 @@
 export interface Member {
   id: string;
   name: string;
+  // Optional bank account fields
+  bankId?: string;
+  bankName?: string;
+  bankShortName?: string;
+  accountName?: string;
+  accountNo?: string;
+}
+
+// Bank information
+export interface Bank {
+  id: string;
+  name: string;
+  shortName: string;
+  appCode: string;
+  logo: string;
 }
 
 // The single expense group
@@ -23,6 +38,7 @@ export interface ExpenseSplit {
   amount: number; // calculated actual amount
   signedOff: boolean;
   signedAt?: string;
+  signedBy?: string;  // NEW: tracks who performed the sign-off (self vs. forced)
   previousAmount?: number; // stored when amount changes and needs re-sign-off
 }
 
