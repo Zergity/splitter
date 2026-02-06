@@ -138,10 +138,20 @@ export async function signOffExpense(
 ): Promise<Expense> {
   const now = new Date().toISOString();
 
-  // Validate force sign-off permissions
-  if (targetMemberId && targetMemberId !== memberId) {
+  // Validate force sign-off permissions and target member
+  if (targetMemberId) {
+    // Always validate permissions when using force sign-off mode
     if (!canForceSignOff(expense, memberId)) {
       throw new Error('Cannot force sign-off: grace period not reached or insufficient permissions');
+    }
+
+    // Validate target member exists in splits
+    const targetSplit = expense.splits.find(s => s.memberId === targetMemberId);
+    if (!targetSplit) {
+      throw new Error(`Member ${targetMemberId} is not a participant in this expense`);
+    }
+    if (targetSplit.signedOff) {
+      throw new Error('This split is already signed off');
     }
   }
 
