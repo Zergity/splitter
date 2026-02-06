@@ -133,14 +133,29 @@ export function hasUnsignedParticipants(expense: Expense, excludeMemberId?: stri
 // Sign-off helper
 export async function signOffExpense(
   expense: Expense,
-  memberId: string
+  memberId: string,
+  targetMemberId?: string  // If provided, force sign-off for this member
 ): Promise<Expense> {
+  const now = new Date().toISOString();
+
+  // Validate force sign-off permissions
+  if (targetMemberId && targetMemberId !== memberId) {
+    if (!canForceSignOff(expense, memberId)) {
+      throw new Error('Cannot force sign-off: grace period not reached or insufficient permissions');
+    }
+  }
+
   const updatedSplits = expense.splits.map((split) => {
-    if (split.memberId === memberId && !split.signedOff) {
+    const shouldSign = targetMemberId
+      ? split.memberId === targetMemberId && !split.signedOff
+      : split.memberId === memberId && !split.signedOff;
+
+    if (shouldSign) {
       return {
         ...split,
         signedOff: true,
-        signedAt: new Date().toISOString(),
+        signedAt: now,
+        signedBy: memberId,  // Track who performed the action (audit trail)
         previousAmount: undefined, // Clear after signing off
       };
     }
