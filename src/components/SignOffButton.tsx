@@ -39,20 +39,22 @@ export function SignOffButton({
     buttonText = loading ? 'Accepting...' : 'Accept';
   }
 
-  // Determine button color (AMBER for force sign-off)
+  // Determine button styles
   const colorClass = isForceSignOff
-    ? 'bg-amber-600 hover:bg-amber-700'  // Warning/amber theme for force actions
+    ? 'text-amber-400 hover:text-amber-300'  // Text link style for force actions
     : isSettlement
       ? 'bg-green-600 hover:bg-green-700'
       : 'bg-cyan-600 hover:bg-cyan-700';
+
+  const sizeClass = isForceSignOff
+    ? (compact ? 'text-xs' : 'text-sm')  // Text link is smaller
+    : (compact ? 'py-1 px-3 text-sm' : 'w-full py-2 px-4');
 
   return (
     <button
       onClick={handleSignOff}
       disabled={loading}
-      className={`text-white rounded-lg font-medium disabled:opacity-50 ${
-        compact ? 'py-1 px-3 text-sm' : 'w-full py-2 px-4'
-      } ${colorClass}`}
+      className={`text-white rounded-lg font-medium disabled:opacity-50 ${sizeClass} ${colorClass}`}
     >
       {buttonText}
     </button>
