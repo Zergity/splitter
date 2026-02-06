@@ -4,6 +4,7 @@ import { Expense, Member } from '../types';
 import { formatCurrency, formatRelativeTime, getTagColor, isDeleted } from '../utils/balances';
 import { SignOffButton } from './SignOffButton';
 import { useApp } from '../context/AppContext';
+import { canForceSignOff, hasUnsignedParticipants } from '../api/client';
 
 interface ExpenseCardProps {
   expense: Expense;
@@ -36,6 +37,10 @@ export function ExpenseCard({
   const isSettlement = expense.splitType === 'settlement';
   const expenseDeleted = isDeleted(expense);
 
+  // Force sign-off eligibility
+  const canForceAccept = currentUser && canForceSignOff(expense, currentUser.id);
+  const hasUnsigned = hasUnsignedParticipants(expense, currentUser?.id);
+
   // Check if expense has unassigned items (incomplete)
   const hasUnassignedItems = expense.items?.some((item) => !item.memberId) ?? false;
 
@@ -53,6 +58,11 @@ export function ExpenseCard({
     const name = member?.name || 'Unknown';
     if (currentUser && id === currentUser.id) return <>[{name}]</>;
     return name;
+  };
+
+  const getMemberNameString = (id: string) => {
+    const member = members.find((m) => m.id === id);
+    return member?.name || 'Unknown';
   };
 
   const userSplit = currentUser
@@ -316,6 +326,13 @@ export function ExpenseCard({
             </div>
           )}
 
+          {/* Force sign-off badge - show in collapsed view */}
+          {canForceAccept && hasUnsigned && !expanded && (
+            <span className="text-xs bg-amber-500/20 text-amber-300 px-2 py-1 rounded inline-flex items-center gap-1 mt-2">
+              ⏱️ Can force accept
+            </span>
+          )}
+
           {/* Expanded view: unified participants + items */}
           {expanded && (
             <div>
@@ -348,7 +365,15 @@ export function ExpenseCard({
                         <div className="flex items-center gap-2 text-sm">
                           <span className={`w-2 h-2 rounded-full flex-shrink-0 ${split.signedOff ? 'bg-green-500' : 'bg-yellow-500'}`} />
                           <span className="flex-shrink-0">{getMemberName(split.memberId)}</span>
-                          {split.signedOff && <span className="text-xs text-green-400">✓</span>}
+                          {split.signedOff && !split.signedBy && <span className="text-xs text-green-400">✓</span>}
+                          {split.signedOff && split.signedBy && split.signedBy !== split.memberId && (
+                            <span
+                              className="text-xs text-amber-400 cursor-help"
+                              title={`Force accepted by ${getMemberNameString(split.signedBy!)}`}
+                            >
+                              ⚠️
+                            </span>
+                          )}
                           {singleItem.description && <span className="text-gray-500 truncate">{singleItem.description}</span>}
                           <span className="text-gray-400">({formatCurrency(singleItem.amount, currency)})</span>
                           {isMe && (
@@ -364,6 +389,15 @@ export function ExpenseCard({
                               {claimingItemId === singleItem.id ? '...' : '×'}
                             </button>
                           )}
+                          {/* Force accept button for unsigned non-self participants */}
+                          {!split.signedOff && !isMe && canForceAccept && (
+                            <SignOffButton
+                              expense={expense}
+                              compact
+                              targetMemberId={split.memberId}
+                              isForceSignOff
+                            />
+                          )}
                         </div>
                       ) : (
                         /* Multiple items or no items: header + nested */
@@ -371,9 +405,26 @@ export function ExpenseCard({
                           <div className="flex items-center gap-2 text-sm">
                             <span className={`w-2 h-2 rounded-full flex-shrink-0 ${split.signedOff ? 'bg-green-500' : 'bg-yellow-500'}`} />
                             <span>{getMemberName(split.memberId)}</span>
-                            {split.signedOff && <span className="text-xs text-green-400">✓</span>}
+                            {split.signedOff && !split.signedBy && <span className="text-xs text-green-400">✓</span>}
+                            {split.signedOff && split.signedBy && split.signedBy !== split.memberId && (
+                              <span
+                                className="text-xs text-amber-400 cursor-help"
+                                title={`Force accepted by ${getMemberNameString(split.signedBy!)}`}
+                              >
+                                ⚠️
+                              </span>
+                            )}
                             <span className="text-gray-300">{formatCurrency(displayAmount, currency)}</span>
                           </div>
+                          {/* Force accept button for unsigned non-self participants */}
+                          {!split.signedOff && !isMe && canForceAccept && (
+                            <SignOffButton
+                              expense={expense}
+                              compact
+                              targetMemberId={split.memberId}
+                              isForceSignOff
+                            />
+                          )}
                           {hasMultipleItems && (
                             <div className="ml-4 space-y-0.5">
                               {memberItems.map((item) => (
