@@ -102,6 +102,33 @@ export async function processReceipt(file: File): Promise<ReceiptOCRResult> {
   };
 }
 
+// Force sign-off constants and helpers
+export const GRACE_PERIOD_DAYS = 7;
+
+// Check if current user can force sign-off this expense
+export function canForceSignOff(expense: Expense, memberId: string): boolean {
+  // Must be creator or payer
+  const isCreatorOrPayer = expense.createdBy === memberId || expense.paidBy === memberId;
+  if (!isCreatorOrPayer) return false;
+
+  // Must be >=7 days old
+  const createdAt = new Date(expense.createdAt);
+  const now = new Date();
+  const daysPassed = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
+
+  // Must NOT be a settlement
+  if (expense.splitType === 'settlement') return false;
+
+  return daysPassed >= GRACE_PERIOD_DAYS;
+}
+
+// Check if expense has any unsigned participants (excluding optional memberId)
+export function hasUnsignedParticipants(expense: Expense, excludeMemberId?: string): boolean {
+  return expense.splits.some(
+    split => !split.signedOff && split.memberId !== excludeMemberId
+  );
+}
+
 // Sign-off helper
 export async function signOffExpense(
   expense: Expense,
