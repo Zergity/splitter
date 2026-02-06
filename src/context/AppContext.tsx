@@ -24,7 +24,7 @@ interface AppContextType {
   createExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => Promise<void>;
   updateExpense: (id: string, updates: Partial<Expense>) => Promise<void>;
   deleteExpense: (expense: Expense) => Promise<void>;
-  signOffExpense: (expense: Expense) => Promise<void>;
+  signOffExpense: (expense: Expense, targetMemberId?: string) => Promise<void>;
   claimExpenseItem: (expenseId: string, itemId: string, claim: boolean) => Promise<void>;
 }
 
@@ -143,9 +143,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOffExpense = useCallback(
-    async (expense: Expense) => {
+    async (expense: Expense, targetMemberId?: string) => {
       if (!currentUser) return;
-      const updated = await api.signOffExpense(expense, currentUser.id);
+      const updated = await api.signOffExpense(expense, currentUser.id, targetMemberId);
       setExpenses((prev) =>
         prev.map((e) => (e.id === expense.id ? updated : e))
       );
